@@ -1,0 +1,9 @@
+nibabel>=5.1.0
+numpy>=1.24.0
+Pillow>=10.0.0
+google-genai>=0.3.0
+pandas>=2.0.0
+scipy>=1.11.0
+tqdm>=4.66.0
+jsonschema>=4.20.0
+matplotlib>=3.7.0

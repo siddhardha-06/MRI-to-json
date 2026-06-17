@@ -1,0 +1,65 @@
+{
+  "subject_id": "OAS1_0004_MR1",
+  "slice_index": 85,
+  "source_file": "data\\raw\\OAS1_0004_MR1\\RAW\\OAS1_0004_MR1_mpr-1_anon.img",
+  "generated_at": "2026-06-17T06:30:00.140383Z",
+  "pipeline_version": "0.1.0",
+  "modality": "T1-weighted",
+  "plane": "sagittal",
+  "image_quality": "good",
+  "anatomy": {
+    "visible_structures": [
+      "cerebral cortex",
+      "cerebral white matter",
+      "corpus callosum",
+      "thalamus",
+      "hippocampus",
+      "cerebellum",
+      "brainstem",
+      "optic nerve",
+      "orbit"
+    ],
+    "hemisphere_symmetry": "symmetric \u2014 only one hemisphere is visualized in this sagittal view",
+    "cortical_ribbon": "preserved",
+    "sulcal_pattern": "normal depth"
+  },
+  "tissue_findings": {
+    "gray_matter": "Appears normal in signal intensity and morphology.",
+    "white_matter": "Appears normal in signal intensity and morphology.",
+    "ventricles": "The lateral ventricle is partially visualized and appears normal in size.",
+    "sulci_gyri": "The sulci and gyri are well-defined and appear normal in depth and configuration.",
+    "basal_ganglia": "Not clearly delineated in this sagittal slice.",
+    "thalamus": "The thalamus is visible and appears normal in signal intensity and morphology.",
+    "cerebellum": "The cerebellum is visible and appears normal in signal intensity and morphology.",
+    "brainstem": "The brainstem is visible and appears normal in signal intensity and morphology."
+  },
+  "pathology_flags": {
+    "atrophy": false,
+    "atrophy_severity": "none",
+    "white_matter_lesions": false,
+    "lesion_count_estimate": "none",
+    "mass_effect": false,
+    "midline_shift": false,
+    "hydrocephalus": false,
+    "infarct": false,
+    "hemorrhage": false,
+    "notes": "No acute intracranial abnormalities are identified."
+  },
+  "global_impression": "This sagittal T1-weighted MRI of the brain demonstrates normal anatomy without evidence of acute pathology. The gray matter, white matter, ventricles, sulci, gyri, thalamus, cerebellum, and brainstem all appear within normal limits for a 28-year-old male.",
+  "confidence": 1.0,
+  "oasis_metadata": {
+    "age": 28,
+    "sex": "M",
+    "handedness": "R",
+    "education_years": null,
+    "mmse": null,
+    "cdr": null,
+    "nwbv": 0.803,
+    "etiv": "1588",
+    "asf": 1.105
+  },
+  "validation": {
+    "passed": true,
+    "issues": []
+  }
+}

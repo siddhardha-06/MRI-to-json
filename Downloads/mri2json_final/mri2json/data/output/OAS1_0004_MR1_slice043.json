@@ -1,0 +1,66 @@
+{
+  "subject_id": "OAS1_0004_MR1",
+  "slice_index": 43,
+  "source_file": "data\\raw\\OAS1_0004_MR1\\RAW\\OAS1_0004_MR1_mpr-1_anon.img",
+  "generated_at": "2026-06-17T06:29:48.770206Z",
+  "pipeline_version": "0.1.0",
+  "modality": "T1-weighted",
+  "plane": "sagittal",
+  "image_quality": "good",
+  "anatomy": {
+    "visible_structures": [
+      "cerebral cortex",
+      "cerebral white matter",
+      "corpus callosum",
+      "basal ganglia (caudate nucleus, putamen, globus pallidus)",
+      "thalamus",
+      "hippocampus",
+      "cerebellum",
+      "brainstem (midbrain, pons, medulla)",
+      "optic nerve",
+      "orbit"
+    ],
+    "hemisphere_symmetry": "symmetric \u2014 no obvious asymmetry noted in this sagittal view.",
+    "cortical_ribbon": "preserved",
+    "sulcal_pattern": "normal depth"
+  },
+  "tissue_findings": {
+    "gray_matter": "Appears normal in signal intensity and morphology.",
+    "white_matter": "Appears normal in signal intensity. There are a few small punctate T1 hypointense foci within the white matter, which are likely incidental or represent normal perivascular spaces.",
+    "ventricles": "The lateral ventricles and third ventricle are normal in size and configuration.",
+    "sulci_gyri": "The sulci and gyri are well-defined and demonstrate normal depth and morphology.",
+    "basal_ganglia": "The caudate nucleus, putamen, and globus pallidus are clearly visualized and appear normal.",
+    "thalamus": "The thalamus is clearly visualized and appears normal.",
+    "cerebellum": "The cerebellum is visualized and appears normal.",
+    "brainstem": "The midbrain, pons, and medulla are visualized and appear normal."
+  },
+  "pathology_flags": {
+    "atrophy": false,
+    "atrophy_severity": "none",
+    "white_matter_lesions": false,
+    "lesion_count_estimate": "none",
+    "mass_effect": false,
+    "midline_shift": false,
+    "hydrocephalus": false,
+    "infarct": false,
+    "hemorrhage": false,
+    "notes": "No acute intracranial abnormality identified."
+  },
+  "global_impression": "This sagittal T1-weighted MRI of the brain demonstrates normal anatomy and signal characteristics. There is no evidence of atrophy, white matter lesions, mass effect, or acute intracranial abnormality.",
+  "confidence": 1.0,
+  "oasis_metadata": {
+    "age": 28,
+    "sex": "M",
+    "handedness": "R",
+    "education_years": null,
+    "mmse": null,
+    "cdr": null,
+    "nwbv": 0.803,
+    "etiv": "1588",
+    "asf": 1.105
+  },
+  "validation": {
+    "passed": true,
+    "issues": []
+  }
+}

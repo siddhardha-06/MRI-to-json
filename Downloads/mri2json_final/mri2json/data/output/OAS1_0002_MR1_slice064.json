@@ -1,0 +1,62 @@
+{
+  "subject_id": "OAS1_0002_MR1",
+  "slice_index": 64,
+  "source_file": "data\\raw\\OAS1_0002_MR1\\RAW\\OAS1_0002_MR1_mpr-1_anon.img",
+  "generated_at": "2026-06-17T06:29:17.650122Z",
+  "pipeline_version": "0.1.0",
+  "modality": "FLAIR",
+  "plane": "sagittal",
+  "image_quality": "good",
+  "anatomy": {
+    "visible_structures": [
+      "cerebral cortex",
+      "corpus callosum",
+      "thalamus",
+      "cerebellum",
+      "brainstem",
+      "ventricles"
+    ],
+    "hemisphere_symmetry": "not applicable \u2014 sagittal view",
+    "cortical_ribbon": "preserved",
+    "sulcal_pattern": "normal depth"
+  },
+  "tissue_findings": {
+    "gray_matter": "Appears normal in signal intensity and morphology.",
+    "white_matter": "Appears normal in signal intensity and morphology. No focal lesions are identified.",
+    "ventricles": "The lateral and third ventricles are normal in size and configuration.",
+    "sulci_gyri": "The sulci and gyri are well-defined and appear normal in depth.",
+    "basal_ganglia": "Partially visible, appears normal.",
+    "thalamus": "Visible and appears normal in signal intensity and morphology.",
+    "cerebellum": "Visible and appears normal in signal intensity and morphology.",
+    "brainstem": "Visible and appears normal in signal intensity and morphology."
+  },
+  "pathology_flags": {
+    "atrophy": false,
+    "atrophy_severity": "none",
+    "white_matter_lesions": false,
+    "lesion_count_estimate": "none",
+    "mass_effect": false,
+    "midline_shift": false,
+    "hydrocephalus": false,
+    "infarct": false,
+    "hemorrhage": false,
+    "notes": "No acute intracranial abnormality identified."
+  },
+  "global_impression": "This sagittal FLAIR image demonstrates normal brain parenchyma, ventricles, and posterior fossa structures. There is no evidence of acute infarct, hemorrhage, mass effect, or significant atrophy.",
+  "confidence": 1.0,
+  "oasis_metadata": {
+    "age": 55,
+    "sex": "F",
+    "handedness": "R",
+    "education_years": 4.0,
+    "mmse": 29.0,
+    "cdr": 0.0,
+    "nwbv": 0.81,
+    "etiv": "1147",
+    "asf": 1.531
+  },
+  "validation": {
+    "passed": true,
+    "issues": []
+  }
+}

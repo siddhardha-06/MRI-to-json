@@ -1,0 +1,66 @@
+{
+  "subject_id": "OAS1_0005_MR1",
+  "slice_index": 43,
+  "source_file": "data\\raw\\OAS1_0005_MR1\\RAW\\OAS1_0005_MR1_mpr-1_anon.img",
+  "generated_at": "2026-06-17T06:30:06.090200Z",
+  "pipeline_version": "0.1.0",
+  "modality": "T1-weighted",
+  "plane": "sagittal",
+  "image_quality": "good",
+  "anatomy": {
+    "visible_structures": [
+      "cerebral cortex",
+      "cerebral white matter",
+      "corpus callosum",
+      "thalamus",
+      "basal ganglia (caudate nucleus, putamen, globus pallidus)",
+      "hippocampus",
+      "cerebellum",
+      "brainstem (midbrain, pons, medulla)",
+      "optic nerve",
+      "orbit"
+    ],
+    "hemisphere_symmetry": "symmetric \u2014 the visible structures appear symmetric in this sagittal view.",
+    "cortical_ribbon": "preserved",
+    "sulcal_pattern": "normal depth"
+  },
+  "tissue_findings": {
+    "gray_matter": "The gray matter demonstrates normal signal intensity and morphology.",
+    "white_matter": "The white matter shows normal signal intensity and appears unremarkable.",
+    "ventricles": "The lateral ventricles and third ventricle are normal in size and configuration.",
+    "sulci_gyri": "The sulci and gyri are well-defined with normal depth and appear age-appropriate.",
+    "basal_ganglia": "The basal ganglia are clearly visualized and appear normal.",
+    "thalamus": "The thalami are clearly visualized and appear normal.",
+    "cerebellum": "The cerebellum is visualized and appears normal.",
+    "brainstem": "The brainstem is visualized and appears normal."
+  },
+  "pathology_flags": {
+    "atrophy": false,
+    "atrophy_severity": "none",
+    "white_matter_lesions": false,
+    "lesion_count_estimate": "none",
+    "mass_effect": false,
+    "midline_shift": false,
+    "hydrocephalus": false,
+    "infarct": false,
+    "hemorrhage": false,
+    "notes": "No acute intracranial abnormalities are identified."
+  },
+  "global_impression": "This sagittal T1-weighted image of the brain demonstrates normal anatomy and signal characteristics. There is no evidence of acute pathology.",
+  "confidence": 1.0,
+  "oasis_metadata": {
+    "age": 18,
+    "sex": "M",
+    "handedness": "R",
+    "education_years": null,
+    "mmse": null,
+    "cdr": null,
+    "nwbv": 0.848,
+    "etiv": "1737",
+    "asf": 1.01
+  },
+  "validation": {
+    "passed": true,
+    "issues": []
+  }
+}

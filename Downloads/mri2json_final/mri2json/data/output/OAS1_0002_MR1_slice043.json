@@ -1,0 +1,65 @@
+{
+  "subject_id": "OAS1_0002_MR1",
+  "slice_index": 43,
+  "source_file": "data\\raw\\OAS1_0002_MR1\\RAW\\OAS1_0002_MR1_mpr-1_anon.img",
+  "generated_at": "2026-06-17T06:29:12.380516Z",
+  "pipeline_version": "0.1.0",
+  "modality": "T1-weighted",
+  "plane": "sagittal",
+  "image_quality": "good",
+  "anatomy": {
+    "visible_structures": [
+      "cerebral cortex",
+      "cerebral white matter",
+      "corpus callosum",
+      "thalamus",
+      "basal ganglia (partially)",
+      "brainstem (partially)",
+      "cerebellum (partially)",
+      "orbit",
+      "optic nerve"
+    ],
+    "hemisphere_symmetry": "symmetric \u2014 only one hemisphere is clearly visualized in this sagittal view",
+    "cortical_ribbon": "preserved",
+    "sulcal_pattern": "normal depth"
+  },
+  "tissue_findings": {
+    "gray_matter": "Appears normal in signal intensity and morphology.",
+    "white_matter": "Appears normal in signal intensity and morphology.",
+    "ventricles": "The lateral ventricle is partially visible and appears normal in size.",
+    "sulci_gyri": "The sulci and gyri are well-defined and appear normal.",
+    "basal_ganglia": "Partially visible, appears normal.",
+    "thalamus": "Visible and appears normal.",
+    "cerebellum": "Partially visible, appears normal.",
+    "brainstem": "Partially visible, appears normal."
+  },
+  "pathology_flags": {
+    "atrophy": false,
+    "atrophy_severity": "none",
+    "white_matter_lesions": false,
+    "lesion_count_estimate": "none",
+    "mass_effect": false,
+    "midline_shift": false,
+    "hydrocephalus": false,
+    "infarct": false,
+    "hemorrhage": false,
+    "notes": "No acute intracranial abnormalities are identified on this single sagittal T1-weighted image."
+  },
+  "global_impression": "This single sagittal T1-weighted image demonstrates normal brain parenchyma without evidence of acute abnormality. The visualized structures appear unremarkable.",
+  "confidence": 0.95,
+  "oasis_metadata": {
+    "age": 55,
+    "sex": "F",
+    "handedness": "R",
+    "education_years": 4.0,
+    "mmse": 29.0,
+    "cdr": 0.0,
+    "nwbv": 0.81,
+    "etiv": "1147",
+    "asf": 1.531
+  },
+  "validation": {
+    "passed": true,
+    "issues": []
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "subject_id": "OAS1_0001_MR1",
+  "slice_index": 43,
+  "source_file": "data\\raw\\OAS1_0001_MR1\\RAW\\OAS1_0001_MR1_mpr-1_anon.img",
+  "generated_at": "2026-06-17T06:29:00.370156Z",
+  "pipeline_version": "0.1.0",
+  "modality": "T1-weighted",
+  "plane": "sagittal",
+  "image_quality": "good",
+  "anatomy": {
+    "visible_structures": [
+      "cerebral cortex",
+      "cerebral white matter",
+      "corpus callosum",
+      "basal ganglia (caudate nucleus, putamen, globus pallidus)",
+      "thalamus",
+      "hippocampus",
+      "cerebellum",
+      "brainstem (pons, medulla)",
+      "optic nerve",
+      "orbit"
+    ],
+    "hemisphere_symmetry": "symmetric \u2014 The visible structures appear symmetric in this sagittal view.",
+    "cortical_ribbon": "preserved",
+    "sulcal_pattern": "mildly widened"
+  },
+  "tissue_findings": {
+    "gray_matter": "Appears normal in signal intensity and morphology.",
+    "white_matter": "Appears normal in signal intensity and morphology. No focal lesions are identified.",
+    "ventricles": "The lateral ventricles are mildly enlarged, particularly the temporal horns, which is consistent with age-related changes or mild atrophy.",
+    "sulci_gyri": "The sulci are mildly widened, suggesting some degree of cerebral volume loss.",
+    "basal_ganglia": "The caudate nucleus, putamen, and globus pallidus are visible and appear normal.",
+    "thalamus": "The thalamus is visible and appears normal.",
+    "cerebellum": "The cerebellum is visible and appears normal.",
+    "brainstem": "The pons and medulla are visible and appear normal."
+  },
+  "pathology_flags": {
+    "atrophy": true,
+    "atrophy_severity": "mild",
+    "white_matter_lesions": false,
+    "lesion_count_estimate": "none",
+    "mass_effect": false,
+    "midline_shift": false,
+    "hydrocephalus": false,
+    "infarct": false,
+    "hemorrhage": false,
+    "notes": "Mild widening of sulci and mild enlargement of the lateral ventricles are noted, consistent with age-related changes."
+  },
+  "global_impression": "This sagittal T1-weighted image demonstrates mild cerebral atrophy, evidenced by mildly widened sulci and mild ventricular enlargement. No acute findings such as infarct, hemorrhage, or mass effect are identified.",
+  "confidence": 0.95,
+  "oasis_metadata": {
+    "age": 74,
+    "sex": "F",
+    "handedness": "R",
+    "education_years": 2.0,
+    "mmse": 29.0,
+    "cdr": 0.0,
+    "nwbv": 0.743,
+    "etiv": "1344",
+    "asf": 1.306
+  },
+  "validation": {
+    "passed": true,
+    "issues": []
+  }
+}

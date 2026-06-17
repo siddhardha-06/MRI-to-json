@@ -1,0 +1,61 @@
+{
+  "subject_id": "OAS1_0003_MR1",
+  "slice_index": 85,
+  "source_file": "data\\raw\\OAS1_0003_MR1\\RAW\\OAS1_0003_MR1_mpr-1_anon.img",
+  "generated_at": "2026-06-17T06:29:42.529365Z",
+  "pipeline_version": "0.1.0",
+  "modality": "T1-weighted",
+  "plane": "sagittal",
+  "image_quality": "good",
+  "anatomy": {
+    "visible_structures": [
+      "cerebral cortex",
+      "cerebellum",
+      "brainstem",
+      "optic nerve",
+      "orbit"
+    ],
+    "hemisphere_symmetry": "not applicable \u2014 sagittal view",
+    "cortical_ribbon": "preserved",
+    "sulcal_pattern": "mildly widened"
+  },
+  "tissue_findings": {
+    "gray_matter": "Appears normal in signal intensity and morphology.",
+    "white_matter": "Appears normal in signal intensity and morphology. No focal lesions are definitively identified.",
+    "ventricles": "The lateral ventricle is visible and appears normal in size and configuration.",
+    "sulci_gyri": "The sulci appear mildly widened, consistent with age-related changes.",
+    "basal_ganglia": "Not clearly delineated in this sagittal slice.",
+    "thalamus": "Not clearly delineated in this sagittal slice.",
+    "cerebellum": "The cerebellum is visible and appears normal.",
+    "brainstem": "The brainstem is visible and appears normal."
+  },
+  "pathology_flags": {
+    "atrophy": true,
+    "atrophy_severity": "mild",
+    "white_matter_lesions": false,
+    "lesion_count_estimate": "none",
+    "mass_effect": false,
+    "midline_shift": false,
+    "hydrocephalus": false,
+    "infarct": false,
+    "hemorrhage": false,
+    "notes": "Mild widening of sulci is noted, suggestive of mild cerebral atrophy."
+  },
+  "global_impression": "This sagittal T1-weighted MRI demonstrates mild cerebral atrophy, evidenced by mildly widened sulci. The visualized white matter, gray matter, cerebellum, and brainstem appear unremarkable. No acute intracranial pathology is identified.",
+  "confidence": 0.95,
+  "oasis_metadata": {
+    "age": 73,
+    "sex": "F",
+    "handedness": "R",
+    "education_years": 4.0,
+    "mmse": 27.0,
+    "cdr": 0.5,
+    "nwbv": 0.708,
+    "etiv": "1454",
+    "asf": 1.207
+  },
+  "validation": {
+    "passed": true,
+    "issues": []
+  }
+}

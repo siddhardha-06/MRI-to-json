@@ -1,0 +1,61 @@
+{
+  "subject_id": "OAS1_0002_MR1",
+  "slice_index": 85,
+  "source_file": "data\\raw\\OAS1_0002_MR1\\RAW\\OAS1_0002_MR1_mpr-1_anon.img",
+  "generated_at": "2026-06-17T06:29:22.972732Z",
+  "pipeline_version": "0.1.0",
+  "modality": "T1-weighted",
+  "plane": "sagittal",
+  "image_quality": "good",
+  "anatomy": {
+    "visible_structures": [
+      "cerebral cortex",
+      "cerebellum",
+      "brainstem",
+      "optic nerve",
+      "orbit"
+    ],
+    "hemisphere_symmetry": "not applicable \u2014 sagittal view",
+    "cortical_ribbon": "preserved",
+    "sulcal_pattern": "normal depth"
+  },
+  "tissue_findings": {
+    "gray_matter": "Appears normal in signal intensity and morphology.",
+    "white_matter": "Appears normal in signal intensity and morphology.",
+    "ventricles": "Not well visualized in this sagittal slice, but no obvious enlargement.",
+    "sulci_gyri": "Normal sulcal and gyral pattern without significant widening.",
+    "basal_ganglia": "Not visible in this slice.",
+    "thalamus": "Not visible in this slice.",
+    "cerebellum": "Appears normal in signal intensity and morphology.",
+    "brainstem": "Appears normal in signal intensity and morphology."
+  },
+  "pathology_flags": {
+    "atrophy": false,
+    "atrophy_severity": "none",
+    "white_matter_lesions": false,
+    "lesion_count_estimate": "none",
+    "mass_effect": false,
+    "midline_shift": false,
+    "hydrocephalus": false,
+    "infarct": false,
+    "hemorrhage": false,
+    "notes": "No acute intracranial abnormalities are identified."
+  },
+  "global_impression": "This sagittal T1-weighted image demonstrates normal brain parenchyma, cerebellum, and brainstem. There is no evidence of acute intracranial pathology.",
+  "confidence": 1.0,
+  "oasis_metadata": {
+    "age": 55,
+    "sex": "F",
+    "handedness": "R",
+    "education_years": 4.0,
+    "mmse": 29.0,
+    "cdr": 0.0,
+    "nwbv": 0.81,
+    "etiv": "1147",
+    "asf": 1.531
+  },
+  "validation": {
+    "passed": true,
+    "issues": []
+  }
+}

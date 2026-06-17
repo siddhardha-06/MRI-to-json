@@ -1,0 +1,26 @@
+{
+  "subject_id": "OAS1_0001_MR1",
+  "slice_index": 85,
+  "source_file": "data\\raw\\OAS1_0001_MR1\\RAW\\OAS1_0001_MR1_mpr-1_anon.img",
+  "generated_at": "2026-06-17T06:29:06.952466Z",
+  "pipeline_version": "0.1.0",
+  "error": "503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}",
+  "confidence": 0.0,
+  "oasis_metadata": {
+    "age": 74,
+    "sex": "F",
+    "handedness": "R",
+    "education_years": 2.0,
+    "mmse": 29.0,
+    "cdr": 0.0,
+    "nwbv": 0.743,
+    "etiv": "1344",
+    "asf": 1.306
+  },
+  "validation": {
+    "passed": false,
+    "issues": [
+      "Parse error: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}"
+    ]
+  }
+}

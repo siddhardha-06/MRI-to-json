@@ -1,0 +1,26 @@
+{
+  "subject_id": "OAS1_0005_MR1",
+  "slice_index": 64,
+  "source_file": "data\\raw\\OAS1_0005_MR1\\RAW\\OAS1_0005_MR1_mpr-1_anon.img",
+  "generated_at": "2026-06-17T06:30:07.514378Z",
+  "pipeline_version": "0.1.0",
+  "error": "503 UNAVAILABLE. {'error': {'code': 503, 'message': 'The service is currently unavailable.', 'status': 'UNAVAILABLE'}}",
+  "confidence": 0.0,
+  "oasis_metadata": {
+    "age": 18,
+    "sex": "M",
+    "handedness": "R",
+    "education_years": null,
+    "mmse": null,
+    "cdr": null,
+    "nwbv": 0.848,
+    "etiv": "1737",
+    "asf": 1.01
+  },
+  "validation": {
+    "passed": false,
+    "issues": [
+      "Parse error: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'The service is currently unavailable.', 'status': 'UNAVAILABLE'}}"
+    ]
+  }
+}

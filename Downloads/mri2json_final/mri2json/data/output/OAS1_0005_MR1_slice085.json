@@ -1,0 +1,65 @@
+{
+  "subject_id": "OAS1_0005_MR1",
+  "slice_index": 85,
+  "source_file": "data\\raw\\OAS1_0005_MR1\\RAW\\OAS1_0005_MR1_mpr-1_anon.img",
+  "generated_at": "2026-06-17T06:30:13.481779Z",
+  "pipeline_version": "0.1.0",
+  "modality": "T1-weighted",
+  "plane": "sagittal",
+  "image_quality": "good",
+  "anatomy": {
+    "visible_structures": [
+      "cerebral cortex",
+      "corpus callosum",
+      "thalamus",
+      "hippocampus",
+      "pons",
+      "medulla oblongata",
+      "cerebellum",
+      "optic nerve",
+      "orbit"
+    ],
+    "hemisphere_symmetry": "symmetric \u2014 this is a midline sagittal view, so symmetry cannot be assessed.",
+    "cortical_ribbon": "preserved",
+    "sulcal_pattern": "normal depth"
+  },
+  "tissue_findings": {
+    "gray_matter": "Appears normal in signal intensity and morphology.",
+    "white_matter": "Appears normal in signal intensity and morphology.",
+    "ventricles": "The lateral ventricles and third ventricle are normal in size and configuration.",
+    "sulci_gyri": "The sulci and gyri are well-defined and appear normal in depth.",
+    "basal_ganglia": "Partially visible, appears normal.",
+    "thalamus": "Visible and appears normal.",
+    "cerebellum": "Visible and appears normal.",
+    "brainstem": "Visible and appears normal."
+  },
+  "pathology_flags": {
+    "atrophy": false,
+    "atrophy_severity": "none",
+    "white_matter_lesions": false,
+    "lesion_count_estimate": "none",
+    "mass_effect": false,
+    "midline_shift": false,
+    "hydrocephalus": false,
+    "infarct": false,
+    "hemorrhage": false,
+    "notes": "No acute intracranial abnormalities are identified."
+  },
+  "global_impression": "This sagittal T1-weighted image demonstrates normal brain anatomy without evidence of acute pathology. The gray matter, white matter, ventricles, and posterior fossa structures appear unremarkable.",
+  "confidence": 1.0,
+  "oasis_metadata": {
+    "age": 18,
+    "sex": "M",
+    "handedness": "R",
+    "education_years": null,
+    "mmse": null,
+    "cdr": null,
+    "nwbv": 0.848,
+    "etiv": "1737",
+    "asf": 1.01
+  },
+  "validation": {
+    "passed": true,
+    "issues": []
+  }
+}
