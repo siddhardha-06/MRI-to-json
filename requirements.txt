@@ -1,0 +1,21 @@
+# Core dependencies
+torch>=2.0.0
+torchvision>=0.15.0
+torchaudio>=2.0.0
+
+# Data handling
+nibabel>=4.0.0
+numpy>=1.21.0
+scipy>=1.7.0
+
+# Pseudo-label generation (OPTIONAL - install separately if needed)
+# synthseg>=1.4.0  # Not available on PyPI - optional for U-Net segmentation only
+
+# Optional: utilities
+tqdm>=4.62.0
+matplotlib>=3.5.0
+scikit-learn>=1.0.0
+
+# Development
+jupyter>=1.0.0
+ipython>=7.0.0
