@@ -9,7 +9,7 @@ numpy>=1.21.0
 scipy>=1.7.0
 
 # Pseudo-label generation (OPTIONAL - install separately if needed)
-# synthseg>=1.4.0  # Not available on PyPI - optional for U-Net segmentation only
+antspyx>=0.3.8     # Replaces SynthSeg for tissue segmentation on Windows/Linux/Mac
 
 # Optional: utilities
 tqdm>=4.62.0

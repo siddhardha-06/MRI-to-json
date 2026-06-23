@@ -302,7 +302,7 @@ def predict_features_from_mri(model, mri_path, feature_mean, feature_std, device
     mri_slice = torch.nn.functional.interpolate(
         mri_slice.unsqueeze(0), size=(256, 256),
         mode='bilinear', align_corners=False
-    ).unsqueeze(0).to(device)  # (1, 1, 256, 256)
+    ).to(device)  # (1, 1, 256, 256)
     
     with torch.no_grad():
         features_norm = model(mri_slice).squeeze().cpu().numpy()
@@ -334,6 +334,7 @@ def batch_predict_features(model, mri_dir, output_file, feature_mean, feature_st
             predictions[mri_file.stem] = features
     
     # Save to JSON
+    os.makedirs(Path(output_file).parent, exist_ok=True)
     with open(output_file, 'w') as f:
         json.dump(predictions, f, indent=2)
     

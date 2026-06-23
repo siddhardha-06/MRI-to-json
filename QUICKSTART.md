@@ -53,8 +53,8 @@ python train_autoencoder.py \
 #### Step 2: (Optional) Generate Segmentation Masks
 ```bash
 # Only needed if training U-Net
-pip install synthseg
-synthseg --i ixi-t1 --o ixi-t1-masks --cpu
+pip install antspyx
+python train_unet.py --generate-masks --mri-dir ixi-t1 --mask-dir ixi-t1-masks
 ```
 
 ✓ Creates: `ixi-t1-masks/` with segmentation masks
@@ -162,7 +162,7 @@ c:\Desktop\CCBD\MRI\
 │   └── regressor_history.json
 ├── features/                    (created)
 │   └── predicted_features.json  ← FINAL OUTPUT
-├── ixi-t1-masks/                (created by SynthSeg)
+├── ixi-t1-masks/                (created by ANTsPy)
 │   ├── IXI002-Guys-0828-T1_seg.nii
 │   └── ... (segmentation masks)
 └── rule_based_features.json     (your ground truth)
@@ -207,7 +207,7 @@ Each file has a feature vector of length `--num-features` (default: 64)
 | `ModuleNotFoundError: No module named 'torch'` | `pip install -r requirements.txt` |
 | `CUDA out of memory` | Reduce `--batch-size` (try 4 or 8) |
 | `No .nii files found` | Check `ixi-t1/` directory structure |
-| `SynthSeg error` | `pip install --upgrade synthseg` |
+| `ANTsPy error` | `pip install --upgrade antspyx` |
 | `rule_based_features.json not found` | Generate it first (see Step 4) |
 
 ---

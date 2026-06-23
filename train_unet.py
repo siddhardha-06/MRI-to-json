@@ -200,6 +200,8 @@ def generate_masks_antspy(mri_dir: str, mask_dir: str):
         list(mri_path.rglob("*.nii.gz")) +
         list(mri_path.rglob("*.nii"))
     )
+    # Keep only files (ignore directories ending with .nii)
+    mri_files = [f for f in mri_files if f.is_file()]
     # Remove .nii files that are part of .nii.gz (avoid duplicates)
     mri_files = [f for f in mri_files if not (
         str(f).endswith(".nii") and Path(str(f) + ".gz").exists()
@@ -275,6 +277,8 @@ class MRISegmentationDataset(Dataset):
             list(self.mri_dir.rglob("*.nii.gz")) +
             list(self.mri_dir.rglob("*.nii"))
         )
+        # Keep only files (ignore directories ending with .nii)
+        mri_files = [f for f in mri_files if f.is_file()]
 
         for mri_file in mri_files:
             stem      = mri_file.name.replace(".nii.gz", "").replace(".nii", "")

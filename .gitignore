@@ -1,4 +1,16 @@
-.venv
-ixi-t1
-ixi-t1-masks
-checkpoints
+.venv/
+__pycache__/
+*.pyc
+
+# Dataset and masks
+ixi-t1/
+ixi-t1-masks/
+*.nii
+*.nii.gz
+*.zip
+*.tar.gz
+
+# Model checkpoints and outputs
+checkpoints/
+features/
+predicted_features.json

@@ -7,7 +7,7 @@ Complete PyTorch-based pipeline for training neural networks on IXI MRI data and
 ```
 IXI MRI Files (.nii)
     ↓
-[Step 1] SynthSeg → Pseudo-labels (GM/WM/CSF masks)
+[Step 1] ANTsPy Atropos → Pseudo-labels (GM/WM/CSF masks)
     ↓
 [Step 2] Train Autoencoder (self-supervised)  ← START HERE
     ↓
@@ -36,12 +36,12 @@ IXI MRI Files (.nii)
 
 ### **Model 2: U-Net Segmentation** SECOND
 - **Why second?**
-  - Requires SynthSeg pseudo-labels (preprocessing step)
+  - Requires ANTsPy pseudo-labels (preprocessing step)
   - Uses autoencoder backbone (optional improvement)
   - Segments GM/WM/CSF regions
   
 - **Training:** MRI → GM/WM/CSF segmentation masks
-- **Requires:** SynthSeg preprocessing (Step 1)
+- **Requires:** ANTsPy preprocessing (Step 1)
 - **File:** `train_unet.py`
 - **Time:** ~20-40 min on GPU (50 epochs)
 
@@ -65,7 +65,7 @@ IXI MRI Files (.nii)
 # Python 3.8+
 pip install torch torchvision torchaudio
 pip install nibabel numpy scipy
-pip install synthseg  # For pseudo-label generation
+pip install antspyx  # For pseudo-label generation (ANTsPy)
 ```
 
 ### Verify Installation
@@ -88,7 +88,7 @@ python pipeline.py
 python train_autoencoder.py --epochs 50 --batch-size 8
 
 # 2. (Optional) Train U-Net
-python pipeline.py --step 3  # Requires SynthSeg masks
+python pipeline.py --step 3  # Requires ANTsPy masks
 
 # 3. Train regressor (requires rule_based_features.json)
 python train_regressor.py --epochs 100 --batch-size 32
@@ -99,7 +99,20 @@ python train_regressor.py --epochs 100 --batch-size 32
 ## Detailed Usage
 
 ### Step 0: Prepare Data
+
+Download the IXI T1 dataset using the Kaggle CLI:
+
+```bash
+# Install Kaggle CLI
+pip install kaggle
+
+# Download the dataset zip file
+kaggle datasets download -d kbacon/ixi-t1
+
+# Unzip the downloaded file into the ixi-t1 directory
+unzip ixi-t1.zip -d ixi-t1/
 ```
+
 Your workspace should have:
 ├── ixi-t1/
 │   ├── IXI002-Guys-0828-T1.nii/
@@ -136,19 +149,19 @@ python train_autoencoder.py \
 
 ---
 
-### Step 2: (Optional) Generate SynthSeg Pseudo-Labels
+### Step 2: (Optional) Generate ANTsPy Pseudo-Labels
 
 Required only for U-Net training.
 
 ```bash
-# Install SynthSeg
-pip install synthseg
+# Install ANTsPy
+pip install antspyx
 
 # Generate masks
 python pipeline.py --step 1
 
 # Or manually:
-synthseg --i ixi-t1 --o ixi-t1-masks --cpu
+python train_unet.py --generate-masks --mri-dir ixi-t1 --mask-dir ixi-t1-masks
 ```
 
 **Output:**
@@ -159,7 +172,7 @@ synthseg --i ixi-t1 --o ixi-t1-masks --cpu
 
 ### Step 3: U-Net Segmentation Training
 
-Requires SynthSeg masks (Step 2).
+Requires ANTsPy masks (Step 2).
 
 ```bash
 python train_unet.py \
@@ -264,7 +277,7 @@ python pipeline.py \
 **Options:**
 - `--step 2` — Run only step 2 (autoencoder)
 - `--skip-unet` — Skip U-Net, only train AE + regressor
-- `--skip-synthseg` — If masks already exist
+- `--skip-synthseg` — Skip ANTsPy pseudo-label generation step
 - `--autoencoder-type 3d` — Use 3D model
 
 ---
@@ -366,10 +379,11 @@ ls ixi-t1/IXI002-Guys-0828-T1.nii/
 # Should contain: IXI002-Guys-0828-T1.nii
 ```
 
-### SynthSeg masks missing
+### ANTsPy masks missing
+
 ```bash
 # Generate them:
-synthseg --i ixi-t1 --o ixi-t1-masks
+python train_unet.py --generate-masks --mri-dir ixi-t1 --mask-dir ixi-t1-masks
 # Then retry U-Net training
 ```
 
@@ -424,7 +438,7 @@ python compute_rule_based_features.py  # Your script
 
 - **Nibabel:** NIfTI file handling
 - **PyTorch:** Deep learning framework
-- **SynthSeg:** Pseudo-label generation (Billot et al., 2023)
+- **ANTsPy:** Atropos tissue segmentation & bias correction (Avants et al.)
 
 ---
 

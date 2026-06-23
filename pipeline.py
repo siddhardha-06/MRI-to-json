@@ -32,20 +32,18 @@ def run_command(cmd, description):
     return True
 
 
-def step_1_generate_synthseg_masks(mri_dir="ixi-t1", output_dir="ixi-t1-masks"):
+def step_1_generate_antspy_masks(mri_dir="ixi-t1", output_dir="ixi-t1-masks"):
     """
-    Step 1: Generate pseudo-labels using SynthSeg
+    Step 1: Generate pseudo-labels using ANTsPy Atropos
     
     Prerequisites:
-    pip install synthseg
+    pip install antspyx
     """
     print("\n" + "="*70)
-    print("STEP 1: Generate SynthSeg Pseudo-Labels")
+    print("STEP 1: Generate ANTsPy Pseudo-Labels")
     print("="*70)
     
-    print("\n⚠️  IMPORTANT: SynthSeg must be installed:")
-    print("  pip install synthseg")
-    print("\nThis step runs SynthSeg on all IXI MRI files to generate GM/WM/CSF masks.")
+    print("\nThis step runs ANTsPy Atropos on all IXI MRI files to generate GM/WM/CSF masks.")
     print("This is required for training the U-Net segmentation model.\n")
     
     # Create output directory
@@ -58,13 +56,12 @@ def step_1_generate_synthseg_masks(mri_dir="ixi-t1", output_dir="ixi-t1-masks"):
         print(f"❌ ERROR: No .nii files found in {mri_dir}")
         return False
     
-    print(f"Found {len(mri_files)} MRI files. Running SynthSeg...\n")
+    print(f"Found {len(mri_files)} MRI files. Running ANTsPy Atropos via train_unet.py...\n")
     
-    # Run SynthSeg (this could take a while)
-    # Uses GPU if available, falls back to CPU
-    cmd = f"synthseg --i {mri_dir} --o {output_dir}"
+    # Run ANTsPy generator via train_unet.py
+    cmd = f"python train_unet.py --generate-masks --mri-dir {mri_dir} --mask-dir {output_dir}"
     
-    success = run_command(cmd, "Running SynthSeg on IXI dataset")
+    success = run_command(cmd, "Generating pseudo-labels with ANTsPy")
     
     if success:
         # Verify masks were created
@@ -150,7 +147,7 @@ def step_3_train_unet(
 def step_4_train_regressor(
     mri_dir="ixi-t1",
     features_file="rule_based_features.json",
-    num_features=64,
+    num_features=29,
     epochs=100,
     batch_size=32,
     save_dir="checkpoints",
@@ -241,13 +238,13 @@ def full_pipeline(args):
     
     all_steps = []
     
-    # Step 1: SynthSeg (if needed)
+    # Step 1: ANTsPy Pseudo-labels (if needed)
     if args.step >= 1 or args.step == 0:
         if args.skip_synthseg:
-            print("\n⊘ Skipping SynthSeg (already have masks)")
+            print("\n⊘ Skipping ANTsPy Pseudo-labels (already have masks)")
         else:
-            success = step_1_generate_synthseg_masks(args.mri_dir, args.mask_dir)
-            all_steps.append(("SynthSeg Pseudo-labels", success))
+            success = step_1_generate_antspy_masks(args.mri_dir, args.mask_dir)
+            all_steps.append(("ANTsPy Pseudo-labels", success))
             if not success and args.step == 1:
                 return all_steps
     
@@ -325,14 +322,14 @@ Examples:
     
     # Data
     parser.add_argument("--mri-dir", default="ixi-t1", help="MRI dataset directory")
-    parser.add_argument("--mask-dir", default="ixi-t1-masks", help="Segmentation masks (from SynthSeg)")
+    parser.add_argument("--mask-dir", default="ixi-t1-masks", help="Segmentation masks (from ANTsPy)")
     parser.add_argument("--features-file", default="rule_based_features.json", help="Rule-based features JSON")
     parser.add_argument("--save-dir", default="checkpoints", help="Save trained models")
     parser.add_argument("--output-dir", default="features", help="Output features directory")
     
     # Steps
     parser.add_argument("--step", type=int, default=0, help="Run specific step (0=all, 1-5)")
-    parser.add_argument("--skip-synthseg", action="store_true", help="Skip SynthSeg step")
+    parser.add_argument("--skip-synthseg", action="store_true", help="Skip ANTsPy pseudo-label generation step")
     parser.add_argument("--skip-unet", action="store_true", help="Skip U-Net training")
     
     # Autoencoder
@@ -348,7 +345,7 @@ Examples:
     # Regressor
     parser.add_argument("--regressor-epochs", type=int, default=100, help="Regressor epochs")
     parser.add_argument("--regressor-batch-size", type=int, default=32, help="Regressor batch size")
-    parser.add_argument("--num-features", type=int, default=64, help="Number of features to predict")
+    parser.add_argument("--num-features", type=int, default=29, help="Number of features to predict")
     
     args = parser.parse_args()
     
