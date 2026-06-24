@@ -247,10 +247,15 @@ def step_6_generate_reports(
         print("You must extract final features first (Step 5)!")
         return False
         
-    if not os.environ.get("GEMINI_API_KEY"):
+    api_key = os.environ.get("GEMINI_API_KEY", "REDACTED_API_KEY")
+    if not api_key:
         print("[WARNING] GEMINI_API_KEY environment variable not set.")
         print("Please set the GEMINI_API_KEY environment variable to generate clinical reports.\n")
         return False
+        
+    # Ensure child processes inherit the API key
+    if "GEMINI_API_KEY" not in os.environ:
+        os.environ["GEMINI_API_KEY"] = api_key
         
     cmd = (
         f"python generate_report.py "

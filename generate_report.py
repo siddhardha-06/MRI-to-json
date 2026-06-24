@@ -18,6 +18,8 @@ from datetime import datetime
 from google import genai
 from google.genai import types
 
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "REDACTED_API_KEY")
+
 def format_clinical_report(patient_id: str, features: dict, clinical_summary: str, timestamp: datetime) -> str:
     """Format the clinical report according to professional medical report template."""
     
@@ -146,7 +148,7 @@ radiologist before any clinical use.
 def generate_report_for_patient(patient_id: str, features: dict, model: str = "gemini-2.5-flash-lite") -> str:
     """Generate a clinical summary for a single patient using Gemini."""
     
-    client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+    client = genai.Client(api_key=GEMINI_API_KEY)
     
     SYSTEM_PROMPT = """You are a neuroradiology AI assistant that interprets quantitative MRI 
 feature data and generates clear, concise clinical summary reports.
@@ -197,6 +199,12 @@ def process_all_patients(input_path: str, output_dir: str, model: str = "gemini-
     with open(input_path, "r") as f:
         all_features = json.load(f)
     
+    # Check if the JSON is a single patient's features directly (not nested)
+    if "schema_version" in all_features and "scan_metadata" in all_features:
+        filename = all_features.get("scan_metadata", {}).get("filename", "")
+        patient_id = Path(filename).stem if filename else "unknown_patient"
+        all_features = {patient_id: all_features}
+        
     print(f"Found {len(all_features)} patients to process")
     
     results = {}
@@ -239,35 +247,48 @@ def process_single_patient(input_path: str, patient_id: str, output_dir: str = "
     with open(input_path, "r") as f:
         all_features = json.load(f)
     
-    if patient_id not in all_features:
-        # Try partial match
-        matches = [k for k in all_features.keys() if patient_id in k]
-        if not matches:
-            print(f"Patient '{patient_id}' not found.")
-            print(f"Available patients: {list(all_features.keys())[:5]}...")
-            return
-        patient_id = matches[0]
-        print(f"Matched patient: {patient_id}")
-    
-    features = all_features[patient_id]
-    print(f"\nGenerating report for: {patient_id}\n")
+    # Check if the JSON is a single patient's features directly (not nested)
+    if "schema_version" in all_features and "scan_metadata" in all_features:
+        features = all_features
+        filename = features.get("scan_metadata", {}).get("filename", "")
+        actual_patient_id = Path(filename).stem if filename else patient_id
+    else:
+        if patient_id not in all_features:
+            # Try partial match
+            matches = [k for k in all_features.keys() if patient_id in k]
+            if not matches:
+                print(f"Patient '{patient_id}' not found.")
+                print(f"Available patients: {list(all_features.keys())[:5]}...")
+                return None
+            patient_id = matches[0]
+            print(f"Matched patient: {patient_id}")
+        
+        features = all_features[patient_id]
+        actual_patient_id = patient_id
+        
+    print(f"\nGenerating report for: {actual_patient_id}\n")
     
     try:
-        clinical_summary = generate_report_for_patient(patient_id, features, model)
+        clinical_summary = generate_report_for_patient(actual_patient_id, features, model)
         timestamp = datetime.now()
-        formatted_report = format_clinical_report(patient_id, features, clinical_summary, timestamp)
+        formatted_report = format_clinical_report(actual_patient_id, features, clinical_summary, timestamp)
         
         # Save report to file
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
         
-        safe_name = patient_id.replace("/", "_").replace("\\", "_")
+        safe_name = actual_patient_id.replace("/", "_").replace("\\", "_")
         report_file = output_path / f"{safe_name}_report.txt"
         
         with open(report_file, "w", encoding="utf-8") as f:
             f.write(formatted_report)
         
-        print(formatted_report)
+        try:
+            print(formatted_report)
+        except UnicodeEncodeError:
+            import sys
+            sys.stdout.write(formatted_report.encode(sys.stdout.encoding or 'utf-8', errors='replace').decode(sys.stdout.encoding or 'utf-8') + '\n')
+        
         print(f"\n{'='*80}")
         print(f"Report saved to: {report_file}")
         
@@ -287,7 +308,7 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     
-    if not os.environ.get("GEMINI_API_KEY"):
+    if not GEMINI_API_KEY:
         print("ERROR: Set GEMINI_API_KEY environment variable first.")
         exit(1)
     

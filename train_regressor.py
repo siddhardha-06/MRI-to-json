@@ -660,10 +660,14 @@ if __name__ == "__main__":
             checkpoint["feature_mean"], checkpoint["feature_std"], device
         )
         
-        # Automatically generate clinical reports if GEMINI_API_KEY is available
-        if os.environ.get("GEMINI_API_KEY"):
+        # Automatically generate clinical reports if GEMINI_API_KEY is available (or fallback)
+        api_key = os.environ.get("GEMINI_API_KEY", "REDACTED_API_KEY")
+        if api_key:
             print("\nGenerating clinical reports...")
             try:
+                # Ensure child imports and processes get the fallback key if not set in environment
+                if "GEMINI_API_KEY" not in os.environ:
+                    os.environ["GEMINI_API_KEY"] = api_key
                 from generate_report import process_all_patients, process_single_patient
                 reports_dir = "reports"
                 if os.path.isfile(args.mri_dir):
