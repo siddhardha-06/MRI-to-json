@@ -32,7 +32,7 @@ def run_command(cmd, description):
     return True
 
 
-def step_1_generate_antspy_masks(mri_dir="ixi-t1", output_dir="ixi-t1-masks"):
+def step_1_generate_antspy_masks(mri_dir="ixi-t1", output_dir="ixi-t1-masks", limit=None):
     """
     Step 1: Generate pseudo-labels using ANTsPy Atropos
     
@@ -60,6 +60,8 @@ def step_1_generate_antspy_masks(mri_dir="ixi-t1", output_dir="ixi-t1-masks"):
     
     # Run ANTsPy generator via train_unet.py
     cmd = f"python train_unet.py --generate-masks --mri-dir {mri_dir} --mask-dir {output_dir}"
+    if limit is not None:
+        cmd += f" --limit {limit}"
     
     success = run_command(cmd, "Generating pseudo-labels with ANTsPy")
     
@@ -243,7 +245,7 @@ def full_pipeline(args):
         if args.skip_synthseg:
             print("\n⊘ Skipping ANTsPy Pseudo-labels (already have masks)")
         else:
-            success = step_1_generate_antspy_masks(args.mri_dir, args.mask_dir)
+            success = step_1_generate_antspy_masks(args.mri_dir, args.mask_dir, limit=args.limit)
             all_steps.append(("ANTsPy Pseudo-labels", success))
             if not success and args.step == 1:
                 return all_steps
@@ -323,6 +325,7 @@ Examples:
     # Data
     parser.add_argument("--mri-dir", default="ixi-t1", help="MRI dataset directory")
     parser.add_argument("--mask-dir", default="ixi-t1-masks", help="Segmentation masks (from ANTsPy)")
+    parser.add_argument("--limit", type=int, default=None, help="Limit the number of masks to generate (useful for testing on CPU)")
     parser.add_argument("--features-file", default="rule_based_features.json", help="Rule-based features JSON")
     parser.add_argument("--save-dir", default="checkpoints", help="Save trained models")
     parser.add_argument("--output-dir", default="features", help="Output features directory")

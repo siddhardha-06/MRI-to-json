@@ -172,7 +172,7 @@ class UNet2D(nn.Module):
 # 2. ANTsPy Pseudo-label Generator (replaces SynthSeg)
 # =============================================================================
 
-def generate_masks_antspy(mri_dir: str, mask_dir: str):
+def generate_masks_antspy(mri_dir: str, mask_dir: str, limit: int = None):
     """
     Replaces: synthseg --i <mri.nii> --o <mask.nii>
 
@@ -202,10 +202,11 @@ def generate_masks_antspy(mri_dir: str, mask_dir: str):
     )
     # Keep only files (ignore directories ending with .nii)
     mri_files = [f for f in mri_files if f.is_file()]
-    # Remove .nii files that are part of .nii.gz (avoid duplicates)
     mri_files = [f for f in mri_files if not (
         str(f).endswith(".nii") and Path(str(f) + ".gz").exists()
     )]
+    if limit is not None:
+        mri_files = mri_files[:limit]
 
     if not mri_files:
         print(f"No .nii / .nii.gz files found in {mri_dir}")
@@ -245,8 +246,8 @@ def generate_masks_antspy(mri_dir: str, mask_dir: str):
             # 0=Background, 1=CSF, 2=Gray Matter, 3=White Matter
             seg_array = seg_result['segmentation'].numpy().astype(np.int16)
 
-            # ── Step 5: Save mask with original affine ─────────────
-            seg_nib = nib.Nifti1Image(seg_array, nib_img.affine)
+            # ── Step 5: Save mask with original affine and header ──
+            seg_nib = nib.Nifti1Image(seg_array, nib_img.affine, header=nib_img.header)
             nib.save(seg_nib, str(out_file))
             success += 1
 
@@ -505,6 +506,8 @@ if __name__ == "__main__":
     parser.add_argument("--save-dir",       default="checkpoints",   help="Checkpoint directory")
     parser.add_argument("--generate-masks", action="store_true",
                         help="Generate ANTsPy pseudo-label masks before training")
+    parser.add_argument("--limit",          type=int,   default=None,
+                        help="Limit the number of masks to generate (useful for testing on CPU)")
     parser.add_argument("--segment",        default=None,
                         help="Path to a single .nii file to segment using trained model")
 
@@ -518,6 +521,7 @@ if __name__ == "__main__":
     print(f"Epochs         : {args.epochs}")
     print(f"Batch size     : {args.batch_size}")
     print(f"Generate masks : {args.generate_masks}")
+    print(f"Mask limit     : {args.limit}")
     print("=" * 70 + "\n")
 
     if args.segment:
@@ -532,7 +536,7 @@ if __name__ == "__main__":
         # Generate masks if requested
         if args.generate_masks:
             print("Step 1: Generating pseudo-labels with ANTsPy...\n")
-            generate_masks_antspy(args.mri_dir, args.mask_dir)
+            generate_masks_antspy(args.mri_dir, args.mask_dir, args.limit)
 
         # Train
         print("Step 2: Training U-Net...\n")
