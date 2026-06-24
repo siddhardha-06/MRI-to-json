@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MRI Pipeline & Analytics Dashboard</title>
+    <!-- Modern typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Modern Glass Navbar -->
+        <header class="app-header">
+            <div class="header-logo">
+                <span class="logo-icon">🧠</span>
+                <h1>NeuroSphere <span class="badge badge-accent">MRI Pipeline</span></h1>
+            </div>
+            <div class="header-status">
+                <div class="status-item">
+                    <span class="status-dot status-green" id="cuda-status-dot"></span>
+                    <span class="status-label">CUDA: <strong id="cuda-status-text">Checking...</strong></span>
+                </div>
+                <div class="status-item">
+                    <span class="status-dot status-blue"></span>
+                    <span class="status-label">Scans: <strong id="total-scans-text">0 Loaded</strong></span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">System: <strong class="text-glow">Online</strong></span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Dashboard Workspace -->
+        <main class="dashboard-grid">
+            
+            <!-- LEFT PANEL: PIPELINE & INGESTION -->
+            <section class="left-panel flex-column">
+                
+                <!-- 1. File Upload Card -->
+                <div class="glass-card upload-card">
+                    <h2 class="card-title">1. Scan Ingestion</h2>
+                    <p class="card-subtitle">Upload a NIfTI (.nii) MRI file to process dynamically</p>
+                    
+                    <div id="drop-zone" class="drop-zone">
+                        <div class="drop-zone-content">
+                            <span class="upload-icon">📤</span>
+                            <p class="upload-text">Drag & drop <strong>.nii file</strong> here</p>
+                            <p class="upload-or">or</p>
+                            <label for="file-input" class="btn btn-primary">Browse Files</label>
+                            <input type="file" id="file-input" accept=".nii" style="display: none;">
+                        </div>
+                        <div id="upload-progress" class="upload-progress" style="display: none;">
+                            <div class="progress-spinner"></div>
+                            <p id="upload-progress-text">Uploading scan file...</p>
+                            <div class="progress-bar-container">
+                                <div id="upload-bar" class="progress-bar-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Pipeline Controls Card -->
+                <div class="glass-card pipeline-card flex-grow">
+                    <div class="card-header-row">
+                        <h2 class="card-title">2. Pipeline Orchestration</h2>
+                        <div class="input-select-group">
+                            <label for="pipeline-data-source">Input:</label>
+                            <select id="pipeline-data-source" class="select-dropdown-sm">
+                                <option value="uploads">Uploaded Scans (uploads/)</option>
+                                <option value="ixi-t1" selected>Default Dataset (ixi-t1/)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Timeline Flow -->
+                    <div class="pipeline-flow" id="pipeline-flow-steps">
+                        
+                        <!-- Step 1 -->
+                        <div class="flow-step" id="flow-step-1">
+                            <div class="flow-marker">
+                                <span class="step-num">1</span>
+                                <span class="step-icon">🏷️</span>
+                            </div>
+                            <div class="flow-content">
+                                <div class="flow-header">
+                                    <h3>Pseudo-Label Generation</h3>
+                                    <span class="flow-badge badge-pending" id="badge-step-1">Pending</span>
+                                </div>
+                                <p>Runs ANTsPy Atropos to segment gray/white matter & CSF masks.</p>
+                                <div class="flow-actions">
+                                    <button class="btn btn-sm btn-outline btn-run-step" data-step="1" id="btn-step-1">Run Step 1</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 2 -->
+                        <div class="flow-step" id="flow-step-2">
+                            <div class="flow-marker">
+                                <span class="step-num">2</span>
+                                <span class="step-icon">🌀</span>
+                            </div>
+                            <div class="flow-content">
+                                <div class="flow-header">
+                                    <h3>Autoencoder Training</h3>
+                                    <span class="flow-badge badge-pending" id="badge-step-2">Pending</span>
+                                </div>
+                                <p>Self-supervised training to learn latent MRI representations.</p>
+                                <div class="flow-actions">
+                                    <button class="btn btn-sm btn-outline btn-run-step" data-step="2" id="btn-step-2">Run Step 2</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 3 -->
+                        <div class="flow-step" id="flow-step-3">
+                            <div class="flow-marker">
+                                <span class="step-num">3</span>
+                                <span class="step-icon">🕸️</span>
+                            </div>
+                            <div class="flow-content">
+                                <div class="flow-header">
+                                    <h3>U-Net Segmentation</h3>
+                                    <span class="flow-badge badge-pending" id="badge-step-3">Pending</span>
+                                </div>
+                                <p>Trains a 2D U-Net model using generated pseudo-labels.</p>
+                                <div class="flow-actions">
+                                    <button class="btn btn-sm btn-outline btn-run-step" data-step="3" id="btn-step-3">Run Step 3</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 4 -->
+                        <div class="flow-step" id="flow-step-4">
+                            <div class="flow-marker">
+                                <span class="step-num">4</span>
+                                <span class="step-icon">📉</span>
+                            </div>
+                            <div class="flow-content">
+                                <div class="flow-header">
+                                    <h3>Regressor Training</h3>
+                                    <span class="flow-badge badge-pending" id="badge-step-4">Pending</span>
+                                </div>
+                                <p>Trains feature regressor against rule-based ground truth.</p>
+                                <div class="flow-actions">
+                                    <button class="btn btn-sm btn-outline btn-run-step" data-step="4" id="btn-step-4">Run Step 4</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 5 & 6 (Combined extraction/reports) -->
+                        <div class="flow-step" id="flow-step-5">
+                            <div class="flow-marker">
+                                <span class="step-num">5</span>
+                                <span class="step-icon">📦</span>
+                            </div>
+                            <div class="flow-content">
+                                <div class="flow-header">
+                                    <h3>Feature & Report Extraction</h3>
+                                    <span class="flow-badge badge-pending" id="badge-step-5">Pending</span>
+                                </div>
+                                <p>Extracts final features to JSON & writes Gemini clinical reports.</p>
+                                <div class="flow-actions flex-row-gap">
+                                    <button class="btn btn-sm btn-outline btn-run-step" data-step="5" id="btn-step-5">Extract Features (5)</button>
+                                    <button class="btn btn-sm btn-outline btn-run-step" data-step="6" id="btn-step-6">Generate Reports (6)</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Terminal Log Card -->
+                <div class="glass-card console-card">
+                    <div class="card-header-row">
+                        <h2 class="card-title">Pipeline Log Console</h2>
+                        <div class="console-controls">
+                            <span class="pulse-indicator" id="console-pulse" style="display:none;"></span>
+                            <button class="btn btn-icon-sm" id="btn-clear-console" title="Clear Console">🧹</button>
+                        </div>
+                    </div>
+                    <div class="console-body" id="console-output">
+                        <div class="console-line system-msg">Initialize NeuroSphere Pipeline Terminal... Ready.</div>
+                        <div class="console-line system-msg">Select a patient or upload a scan to display analytics.</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- RIGHT PANEL: INTERACTIVE VISUALIZER & REPORT -->
+            <section class="right-panel flex-column">
+                
+                <!-- Patient Selector Toolbar (Shows Active Scan) -->
+                <div class="glass-card toolbar-card">
+                    <div class="toolbar-content">
+                        <div class="active-scan-display">
+                            <span class="active-scan-icon">🔍</span>
+                            <span class="active-scan-label">Active MRI Scan:</span>
+                            <strong id="active-scan-name" class="text-glow">No Scan Uploaded Yet</strong>
+                        </div>
+                        <div class="toolbar-meta" id="scan-metadata-summary">
+                            <span class="meta-tag">Awaiting Scan Upload</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Analysis Display -->
+                <div class="analysis-viewport flex-grow" id="analysis-viewport" style="display: none;">
+                    
+                    <!-- Top Section: Metadata & Visualizer -->
+                    <div class="viewport-header-row">
+                        <!-- Canvas Visualizer Card -->
+                        <div class="glass-card visualizer-card">
+                            <div class="card-header-row">
+                                <h3 class="card-title-sm">2D Brain Slice Segmentation</h3>
+                                <div class="visualizer-options">
+                                    <label class="toggle-container">
+                                        <input type="checkbox" id="toggle-bounding-box" checked>
+                                        <span class="toggle-slider"></span>
+                                        Bounding Box
+                                    </label>
+                                    <label class="toggle-container">
+                                        <input type="checkbox" id="toggle-centroid" checked>
+                                        <span class="toggle-slider"></span>
+                                        Centroid
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="canvas-container">
+                                <canvas id="brain-canvas" width="300" height="300"></canvas>
+                                
+                                <div class="canvas-legend">
+                                    <div class="legend-item"><span class="legend-dot" style="background:#5e5ef0;"></span> CSF</div>
+                                    <div class="legend-item"><span class="legend-dot" style="background:#808080;"></span> Gray Matter</div>
+                                    <div class="legend-item"><span class="legend-dot" style="background:#e6e6e6;"></span> White Matter</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Scan Metadata Card -->
+                        <div class="glass-card meta-detail-card flex-column">
+                            <h3 class="card-title-sm">MRI Scan Metadata</h3>
+                            <div class="meta-detail-grid" id="metadata-grid">
+                                <!-- Populated dynamically -->
+                            </div>
+                            
+                            <!-- Tissue Distribution Chart -->
+                            <div class="tissue-dist-container flex-grow">
+                                <h4 class="sub-heading">Tissue Proportions</h4>
+                                <div class="bar-chart-vertical">
+                                    <div class="bar-item">
+                                        <div class="bar-label">CSF / Ventricles</div>
+                                        <div class="bar-track">
+                                            <div class="bar-fill csf-bg" id="bar-csf-pct" style="width: 0%;"></div>
+                                        </div>
+                                        <div class="bar-value" id="label-csf-pct">0%</div>
+                                    </div>
+                                    <div class="bar-item">
+                                        <div class="bar-label">Gray Matter</div>
+                                        <div class="bar-track">
+                                            <div class="bar-fill gm-bg" id="bar-gm-pct" style="width: 0%;"></div>
+                                        </div>
+                                        <div class="bar-value" id="label-gm-pct">0%</div>
+                                    </div>
+                                    <div class="bar-item">
+                                        <div class="bar-label">White Matter</div>
+                                        <div class="bar-track">
+                                            <div class="bar-fill wm-bg" id="bar-wm-pct" style="width: 0%;"></div>
+                                        </div>
+                                        <div class="bar-value" id="label-wm-pct">0%</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Section: Metric Tabs & Clinical Report -->
+                    <div class="viewport-tabs flex-grow flex-column">
+                        <div class="tabs-nav">
+                            <button class="tab-btn active" data-tab="tab-metrics" id="btn-tab-metrics">Quantitative Metrics</button>
+                            <button class="tab-btn" data-tab="tab-comparison" id="btn-tab-comparison">Features Comparison (29 Dims)</button>
+                            <button class="tab-btn" data-tab="tab-report" id="btn-tab-report">Gemini Clinical Report</button>
+                        </div>
+
+                        <div class="tabs-content-container flex-grow">
+                            <!-- Tab 1: Quantitative Metrics -->
+                            <div class="tab-pane active" id="tab-metrics">
+                                <div class="metrics-grid">
+                                    <!-- Intensity Stats -->
+                                    <div class="metric-group-card">
+                                        <h4>Intensity Statistics</h4>
+                                        <table class="metric-table" id="table-intensity">
+                                            <!-- Dynamically populated -->
+                                        </table>
+                                    </div>
+
+                                    <!-- Structural & Symmetry Stats -->
+                                    <div class="metric-group-card">
+                                        <h4>Morphology & Symmetry</h4>
+                                        <table class="metric-table" id="table-morphology">
+                                            <!-- Dynamically populated -->
+                                        </table>
+                                    </div>
+
+                                    <!-- Texture Stats -->
+                                    <div class="metric-group-card">
+                                        <h4>GLCM Texture Features</h4>
+                                        <table class="metric-table" id="table-texture">
+                                            <!-- Dynamically populated -->
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Tab 2: Feature Comparisons -->
+                            <div class="tab-pane" id="tab-comparison">
+                                <div class="comparison-summary">
+                                    <p>Comparing flat 29-dimensional vectors: <strong>Rule-Based Pipeline (Ground Truth)</strong> vs. <strong>Regressor Model Predictions</strong>.</p>
+                                    <div class="comparison-status-banner" id="comparison-status-text">
+                                        Model predictions match ground truth within acceptable error.
+                                    </div>
+                                </div>
+                                <div class="vector-compare-scroll">
+                                    <table class="vector-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Feature Index</th>
+                                                <th>Feature Name</th>
+                                                <th>Rule-Based Value</th>
+                                                <th>Regressor Predicted</th>
+                                                <th>Difference</th>
+                                                <th>Deviation Map</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="comparison-tbody">
+                                            <!-- Populate dynamically -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Tab 3: Gemini Clinical Report -->
+                            <div class="tab-pane" id="tab-report">
+                                <div class="clinical-report-container">
+                                    <div class="clinical-report-toolbar">
+                                        <button class="btn btn-outline" id="btn-print-report">🖨️ Print Report</button>
+                                    </div>
+                                    
+                                    <!-- Print Layout Clinical Document -->
+                                    <div class="clinical-document" id="clinical-document-paper">
+                                        <div id="report-text-content">
+                                            <!-- Loaded dynamically -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Empty Viewport Message -->
+                <div class="glass-card empty-viewport flex-grow" id="empty-viewport-message">
+                    <span class="empty-icon">📊</span>
+                    <h3>No Scan Selected</h3>
+                    <p>Select a patient from the dropdown above or upload a new NIfTI brain MRI to start analyzing.</p>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>
