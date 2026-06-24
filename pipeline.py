@@ -25,10 +25,10 @@ def run_command(cmd, description):
     result = subprocess.run(cmd, shell=True)
     
     if result.returncode != 0:
-        print(f"❌ FAILED: {description}")
+        print(f"[FAILED] FAILED: {description}")
         return False
     
-    print(f"✓ COMPLETED: {description}")
+    print(f"[SUCCESS] COMPLETED: {description}")
     return True
 
 
@@ -53,7 +53,7 @@ def step_1_generate_antspy_masks(mri_dir="ixi-t1", output_dir="ixi-t1-masks", li
     mri_files = sorted(Path(mri_dir).glob("*/*.nii"))
     
     if not mri_files:
-        print(f"❌ ERROR: No .nii files found in {mri_dir}")
+        print(f"[ERROR] No .nii files found in {mri_dir}")
         return False
     
     print(f"Found {len(mri_files)} MRI files. Running ANTsPy Atropos via train_unet.py...\n")
@@ -68,7 +68,7 @@ def step_1_generate_antspy_masks(mri_dir="ixi-t1", output_dir="ixi-t1-masks", li
     if success:
         # Verify masks were created
         masks = list(Path(output_dir).glob("*_seg.nii"))
-        print(f"\n✓ Generated {len(masks)} segmentation masks")
+        print(f"\n[SUCCESS] Generated {len(masks)} segmentation masks")
     
     return success
 
@@ -128,7 +128,7 @@ def step_3_train_unet(
     # Check if masks exist
     masks = list(Path(mask_dir).glob("*_seg.nii"))
     if not masks:
-        print(f"❌ ERROR: No segmentation masks found in {mask_dir}")
+        print(f"[ERROR] No segmentation masks found in {mask_dir}")
         print("You must run Step 1 (SynthSeg) first!")
         return False
     
@@ -167,7 +167,7 @@ def step_4_train_regressor(
     
     # Check if features file exists
     if not Path(features_file).exists():
-        print(f"❌ ERROR: Features file not found: {features_file}")
+        print(f"[ERROR] Features file not found: {features_file}")
         print("You must generate rule-based features first!")
         print("Use your rule-based pipeline to compute features and save as JSON.\n")
         print("Expected format:")
@@ -213,7 +213,7 @@ def step_5_extract_final_features(
     checkpoint_path = Path(checkpoint_dir) / "regressor_best.pth"
     
     if not checkpoint_path.exists():
-        print(f"❌ ERROR: Checkpoint not found: {checkpoint_path}")
+        print(f"[ERROR] Checkpoint not found: {checkpoint_path}")
         print("You must train the regressor first (Step 4)!")
         return False
     
@@ -228,11 +228,45 @@ def step_5_extract_final_features(
     return run_command(cmd, "Extracting Features with Trained Regressor")
 
 
+def step_6_generate_reports(
+    input_file="features/predicted_features.json",
+    output_dir="reports",
+    model="gemini-2.5-flash-lite",
+):
+    """
+    Step 6: Generate clinical reports using Gemini
+    
+    Output: Individual text reports per patient in output_dir
+    """
+    print("\n" + "="*70)
+    print("STEP 6: Generate Clinical Reports")
+    print("="*70)
+    
+    if not Path(input_file).exists():
+        print(f"[ERROR] Input features file not found: {input_file}")
+        print("You must extract final features first (Step 5)!")
+        return False
+        
+    if not os.environ.get("GEMINI_API_KEY"):
+        print("[WARNING] GEMINI_API_KEY environment variable not set.")
+        print("Please set the GEMINI_API_KEY environment variable to generate clinical reports.\n")
+        return False
+        
+    cmd = (
+        f"python generate_report.py "
+        f"--input {input_file} "
+        f"--output {output_dir} "
+        f"--model {model}"
+    )
+    
+    return run_command(cmd, "Generating Clinical Reports with Gemini")
+
+
 def full_pipeline(args):
     """Run complete pipeline"""
     
     print("\n" + "="*70)
-    print("MRI → Model → Features → JSON Pipeline")
+    print("MRI -> Model -> Features -> JSON Pipeline")
     print("="*70)
     print(f"MRI Directory: {args.mri_dir}")
     print(f"Output Directory: {args.output_dir}")
@@ -241,9 +275,9 @@ def full_pipeline(args):
     all_steps = []
     
     # Step 1: ANTsPy Pseudo-labels (if needed)
-    if args.step >= 1 or args.step == 0:
+    if args.step == 1 or args.step == 0:
         if args.skip_synthseg:
-            print("\n⊘ Skipping ANTsPy Pseudo-labels (already have masks)")
+            print("\n[SKIP] Skipping ANTsPy Pseudo-labels (already have masks)")
         else:
             success = step_1_generate_antspy_masks(args.mri_dir, args.mask_dir, limit=args.limit)
             all_steps.append(("ANTsPy Pseudo-labels", success))
@@ -251,7 +285,7 @@ def full_pipeline(args):
                 return all_steps
     
     # Step 2: Train Autoencoder
-    if args.step >= 2 or args.step == 0:
+    if args.step == 2 or args.step == 0:
         success = step_2_train_autoencoder(
             args.mri_dir,
             model_type=args.autoencoder_type,
@@ -265,7 +299,7 @@ def full_pipeline(args):
             return all_steps
     
     # Step 3: Train U-Net (optional)
-    if (args.step >= 3 or args.step == 0) and not args.skip_unet:
+    if (args.step == 3 or args.step == 0) and not args.skip_unet:
         success = step_3_train_unet(
             args.mri_dir,
             args.mask_dir,
@@ -278,7 +312,7 @@ def full_pipeline(args):
             return all_steps
     
     # Step 4: Train Regressor
-    if args.step >= 4 or args.step == 0:
+    if args.step == 4 or args.step == 0:
         success = step_4_train_regressor(
             args.mri_dir,
             features_file=args.features_file,
@@ -292,16 +326,31 @@ def full_pipeline(args):
             return all_steps
     
     # Step 5: Extract features
-    if args.step >= 5 or args.step == 0:
+    if args.step == 5 or args.step == 0:
         success = step_5_extract_final_features(args.mri_dir, args.save_dir, args.output_dir)
         all_steps.append(("Feature Extraction", success))
+        if not success and args.step == 5:
+            return all_steps
+            
+    # Step 6: Generate clinical reports
+    if args.step == 6 or args.step == 0:
+        if args.skip_reports:
+            print("\n[SKIP] Skipping Clinical Report Generation")
+        else:
+            features_json = Path(args.output_dir) / "predicted_features.json"
+            success = step_6_generate_reports(
+                input_file=features_json,
+                output_dir=args.reports_dir,
+                model=args.report_model
+            )
+            all_steps.append(("Report Generation", success))
     
     return all_steps
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Complete MRI → Model → Features → JSON Pipeline",
+        description="Complete MRI -> Model -> Features -> JSON Pipeline",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -331,9 +380,14 @@ Examples:
     parser.add_argument("--output-dir", default="features", help="Output features directory")
     
     # Steps
-    parser.add_argument("--step", type=int, default=0, help="Run specific step (0=all, 1-5)")
+    parser.add_argument("--step", type=int, default=0, help="Run specific step (0=all, 1-6)")
     parser.add_argument("--skip-synthseg", action="store_true", help="Skip ANTsPy pseudo-label generation step")
     parser.add_argument("--skip-unet", action="store_true", help="Skip U-Net training")
+    parser.add_argument("--skip-reports", action="store_true", help="Skip Clinical Report Generation")
+    
+    # Reports
+    parser.add_argument("--reports-dir", default="reports", help="Output reports directory")
+    parser.add_argument("--report-model", default="gemini-2.5-flash-lite", help="Gemini model to use for report generation")
     
     # Autoencoder
     parser.add_argument("--autoencoder-type", choices=["2d", "3d"], default="2d", help="2D or 3D autoencoder")
@@ -361,13 +415,15 @@ Examples:
     print("="*70)
     
     for step_name, success in results:
-        status = "✓" if success else "❌"
+        status = "[SUCCESS]" if success else "[FAILED]"
         print(f"{status} {step_name}")
     
     all_success = all(success for _, success in results)
     
     if all_success:
-        print("\n✓ Pipeline completed successfully!")
-        print(f"✓ Features saved to: {args.output_dir}/predicted_features.json")
+        print("\n[SUCCESS] Pipeline completed successfully!")
+        print(f"[SUCCESS] Features saved to: {args.output_dir}/predicted_features.json")
+        if not args.skip_reports and (args.step == 0 or args.step >= 6):
+            print(f"[SUCCESS] Clinical reports generated in: {args.reports_dir}/")
     else:
-        print("\n❌ Pipeline had failures. Check logs above.")
+        print("\n[FAILED] Pipeline had failures. Check logs above.")

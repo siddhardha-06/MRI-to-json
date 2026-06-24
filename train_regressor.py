@@ -261,7 +261,7 @@ def train_regressor(
             }
             checkpoint_path = os.path.join(save_dir, "regressor_best.pth")
             torch.save(checkpoint, checkpoint_path)
-            print(f"✓ Saved best model: {checkpoint_path}\n")
+            print(f"[SUCCESS] Saved best model: {checkpoint_path}\n")
         else:
             patience_counter += 1
             if patience_counter >= patience:
@@ -272,7 +272,7 @@ def train_regressor(
     history_path = os.path.join(save_dir, "regressor_history.json")
     with open(history_path, 'w') as f:
         json.dump(history, f, indent=2)
-    print(f"✓ Training history saved: {history_path}")
+    print(f"[SUCCESS] Training history saved: {history_path}")
     
     return model, history
 
@@ -591,8 +591,8 @@ def batch_predict_features(model, mri_dir, output_file, feature_mean, feature_st
         else:
             json.dump(predictions, f, indent=2)
     
-    print(f"✓ Predicted features for {len(predictions)} MRI files")
-    print(f"✓ Predictions saved to: {output_file}")
+    print(f"[SUCCESS] Predicted features for {len(predictions)} MRI files")
+    print(f"[SUCCESS] Predictions saved to: {output_file}")
     
     return predictions
 
@@ -655,7 +655,23 @@ if __name__ == "__main__":
         
         # Predict
         output_file = os.path.join(args.save_dir, "predicted_features.json")
-        batch_predict_features(
+        predictions = batch_predict_features(
             model, args.mri_dir, output_file,
             checkpoint["feature_mean"], checkpoint["feature_std"], device
         )
+        
+        # Automatically generate clinical reports if GEMINI_API_KEY is available
+        if os.environ.get("GEMINI_API_KEY"):
+            print("\nGenerating clinical reports...")
+            try:
+                from generate_report import process_all_patients, process_single_patient
+                reports_dir = "reports"
+                if os.path.isfile(args.mri_dir):
+                    patient_id = Path(args.mri_dir).stem
+                    process_single_patient(output_file, patient_id, reports_dir)
+                else:
+                    process_all_patients(output_file, reports_dir)
+            except Exception as e:
+                print(f"[ERROR] Could not generate clinical reports automatically: {e}")
+        else:
+            print("\n[INFO] GEMINI_API_KEY not set. Skipping automatic report generation.")

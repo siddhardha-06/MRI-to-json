@@ -284,13 +284,13 @@ def train_autoencoder(
             }
             checkpoint_path = os.path.join(save_dir, f"autoencoder_{model_type}_best.pth")
             torch.save(checkpoint, checkpoint_path)
-            print(f"✓ Saved best model: {checkpoint_path}\n")
+            print(f"[SUCCESS] Saved best model: {checkpoint_path}\n")
     
     # Save final history
     history_path = os.path.join(save_dir, f"autoencoder_{model_type}_history.json")
     with open(history_path, 'w') as f:
         json.dump(history, f, indent=2)
-    print(f"✓ Training history saved: {history_path}")
+    print(f"[SUCCESS] Training history saved: {history_path}")
     
     return model, history
 
@@ -348,8 +348,8 @@ def extract_features_from_mri(model, data_dir, output_file, model_type="2d", dev
     with open(output_file, 'w') as f:
         json.dump(features_dict, f, indent=2)
     
-    print(f"✓ Extracted features for {len(features_dict)} MRI files")
-    print(f"✓ Features saved to: {output_file}")
+    print(f"[SUCCESS] Extracted features for {len(features_dict)} MRI files")
+    print(f"[SUCCESS] Features saved to: {output_file}")
     
     return features_dict
 

@@ -240,17 +240,17 @@ def extract_features_for_all_mris(
             features_dict[mri_file.stem] = features
         except Exception as e:
             errors.append((mri_file.stem, str(e)))
-            print(f"\n⚠️  Error processing {mri_file.stem}: {e}")
+            print(f"\n[WARNING] Error processing {mri_file.stem}: {e}")
     
     # Save
     with open(output_file, 'w') as f:
         json.dump(features_dict, f, indent=2)
     
-    print(f"\n✓ Extracted features for {len(features_dict)} MRI files")
-    print(f"✓ Features saved to: {output_file}")
+    print(f"\n[SUCCESS] Extracted features for {len(features_dict)} MRI files")
+    print(f"[SUCCESS] Features saved to: {output_file}")
     
     if errors:
-        print(f"\n⚠️  {len(errors)} files had errors:")
+        print(f"\n[WARNING] {len(errors)} files had errors:")
         for stem, error in errors[:5]:
             print(f"   {stem}: {error}")
         if len(errors) > 5:

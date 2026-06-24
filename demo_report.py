@@ -138,4 +138,4 @@ with open(report_file, "w", encoding="utf-8") as f:
 
 print(report)
 print(f"\n{'='*80}")
-print(f"✓ Report saved to: {report_file}")
+print(f"\n[SUCCESS] Report saved to: {report_file}")

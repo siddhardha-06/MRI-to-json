@@ -10,28 +10,28 @@ print("VALIDATION: rule_based_features.json")
 print("=" * 70)
 
 # 1. Basic stats
-print(f"\n✓ Total samples: {len(features)}")
+print(f"\n[INFO] Total samples: {len(features)}")
 first_key = list(features.keys())[0]
 num_features = len(features[first_key])
-print(f"✓ Features per sample: {num_features}")
+print(f"[INFO] Features per sample: {num_features}")
 
 # 2. Check for consistency
 all_lengths = [len(v) for v in features.values()]
 if len(set(all_lengths)) == 1:
-    print(f"✓ All samples have {num_features} features (consistent)")
+    print(f"[SUCCESS] All samples have {num_features} features (consistent)")
 else:
-    print(f"❌ INCONSISTENT! Feature counts: {set(all_lengths)}")
+    print(f"[ERROR] INCONSISTENT! Feature counts: {set(all_lengths)}")
 
 # 3. Feature statistics
 all_features = np.array([v for v in features.values()])
-print(f"\n✓ Feature value ranges:")
+print(f"\n[INFO] Feature value ranges:")
 print(f"   Min across all: {all_features.min():.4f}")
 print(f"   Max across all: {all_features.max():.4f}")
 print(f"   Mean across all: {all_features.mean():.4f}")
 print(f"   Std across all: {all_features.std():.4f}")
 
 # 4. Per-feature stats
-print(f"\n✓ Per-feature breakdown (feature ranges):")
+print(f"\n[INFO] Per-feature breakdown (feature ranges):")
 feature_names = [
     "intensity_mean", "intensity_std", "intensity_min", "intensity_max", "intensity_median",
     "intensity_p25", "intensity_p75", "intensity_skew", "intensity_kurt", "intensity_range",
@@ -50,20 +50,20 @@ for i in range(num_features):
 # 5. Check for NaN/Inf
 nan_count = np.isnan(all_features).sum()
 inf_count = np.isinf(all_features).sum()
-print(f"\n✓ Data quality:")
+print(f"\n[INFO] Data quality:")
 print(f"   NaN values: {nan_count}")
 print(f"   Inf values: {inf_count}")
 
 if nan_count == 0 and inf_count == 0:
-    print(f"   ✓ CLEAN DATA - ready for training!")
+    print(f"   [SUCCESS] CLEAN DATA - ready for training!")
 else:
-    print(f"   ❌ DATA HAS ISSUES")
+    print(f"   [ERROR] DATA HAS ISSUES")
 
 # 6. Sample check
-print(f"\n✓ Sample (first MRI: {first_key}):")
+print(f"\n[INFO] Sample (first MRI: {first_key}):")
 print(f"   Features: {features[first_key][:10]}")
 print(f"   (showing first 10 of {num_features})")
 
 print("\n" + "=" * 70)
-print("✓ Validation PASSED - rule_based_features.json is ready!")
+print("[SUCCESS] Validation PASSED - rule_based_features.json is ready!")
 print("=" * 70)

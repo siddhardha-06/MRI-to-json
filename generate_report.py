@@ -216,10 +216,10 @@ def process_all_patients(input_path: str, output_dir: str, model: str = "gemini-
                 f.write(formatted_report)
             
             results[patient_id] = {"status": "success", "report_file": str(report_file)}
-            print(f"  ✓ Saved to {report_file.name}")
+            print(f"  [SUCCESS] Saved to {report_file.name}")
             
         except Exception as e:
-            print(f"  ✗ Error: {e}")
+            print(f"  [ERROR] Error: {e}")
             results[patient_id] = {"status": "error", "error": str(e)}
     
     # Save combined summary
