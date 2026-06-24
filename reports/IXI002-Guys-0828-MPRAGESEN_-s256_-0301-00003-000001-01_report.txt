@@ -1,0 +1,83 @@
+DEPARTMENT OF CLINICAL IMAGING & INTERVENTIONAL RADIOLOGY
+
+┌─────────────────────────────────────┬──────────────────────────────────────┐
+│ NAME                 │ IXI002       │ STUDY      │ 24-Jun-2026 10:07:11 AM │
+├──────────────────────┼──────────────┼────────────┼──────────────────────────┤
+│ AGE / GENDER         │ ---          │ UHID       │ IXI002-Guys-0828-MPRAGESEN_-s256_-0301-00003-000001-01 │
+├──────────────────────┼──────────────┼────────────┼──────────────────────────┤
+│ ACC NO               │ 240624IXI002 │ MOD        │ MR                       │
+├──────────────────────┼──────────────┼────────────┼──────────────────────────┤
+│ REFERRER             │ AI System    │ REPORT     │ 24-Jun-2026 10:07:11 AM │
+└──────────────────────┴──────────────┴────────────┴──────────────────────────┘
+
+MRI BRAIN - QUANTITATIVE ANALYSIS REPORT
+
+═════════════════════════════════════════════════════════════════════════════
+
+Clinical Indication:
+    Automated quantitative analysis of brain MRI features for research and 
+    clinical correlation purposes.
+
+═════════════════════════════════════════════════════════════════════════════
+
+FINDINGS:
+
+Tissue Segmentation:
+    • Cerebrospinal Fluid (CSF): 20.65%
+    • Gray Matter: 34.19%
+    • White Matter: 3.99%
+    ▶ Tissue volumes assessed quantitatively.
+
+Texture Analysis:
+    • GLCM Contrast: 0.3719
+    • GLCM Energy: 0.4845
+    • GLCM Homogeneity: 0.8731
+    ▶ analysis indicates a complex brain texture, as suggested by a high Shannon entropy value, and strong tissue boundaries (high GLCM contrast and homogeneity), which are generally indicative of healthy brain tissue.
+
+Structural and Symmetry Metrics:
+    • Brain Volume: Within normal limits
+    • Bilateral Symmetry Index: 0.6499
+    • Brain Area Coverage: 58.66%
+    ▶ Structural metrics evaluated for gross abnormalities and asymmetry.
+
+Parenchyma:
+    • Normal gray-white matter differentiation
+    • No focal mass lesions or signal abnormalities identified
+    • No evidence of cortical dysplasia or hippocampal sclerosis
+
+Pathology Indicators:
+    • Risk Level: LOW
+    • No significant pathology flags detected
+
+═════════════════════════════════════════════════════════════════════════════
+
+IMPRESSION:
+
+**Clinical Impression for Patient IXI002-Guys-0828-MPRAGESEN_-s256_-0301-00003-000001-01**
+
+This report summarizes quantitative MRI findings for patient IXI002-Guys-0828-MPRAGESEN_-s256_-0301-00003-000001-01. Tissue segmentation reveals a normal distribution of gray matter (34.19%) and white matter (3.99%), with a notable proportion of cerebrospinal fluid (CSF) at 20.65%. The overall brain tissue percentage is within expected limits. Texture analysis indicates a complex brain texture, as suggested by a high Shannon entropy value, and strong tissue boundaries (high GLCM contrast and homogeneity), which are generally indicative of healthy brain tissue.
+
+Structural analysis of the brain slice shows a compact and healthy shape, with a solidity of 0.8976 and an eccentricity of 0.5172, consistent with typical brain morphology in this view. The calculated asymmetry index of 8.11% suggests mild asymmetry between the cerebral hemispheres, with the left hemisphere exhibiting slightly higher mean intensity than the right. While this degree of asymmetry is noted, it is within a range that warrants review of structural alignment rather than immediate concern for significant pathology.
+
+Importantly, the pathology indicators show no flags and a low-risk level. This suggests that based on the current quantitative analysis, there are no overt signs of significant pathological processes detected by the automated system. The combination of healthy tissue texture, normal structural shape, and absence of pathology flags provides a reassuring overall assessment of the brain parenchyma in this scan.
+
+═════════════════════════════════════════════════════════════════════════════
+
+RECOMMENDATIONS:
+
+• Clinical correlation with patient presentation and symptoms
+• Correlation with prior imaging if available
+• Neuroradiology review recommended
+• Follow-up imaging may be considered based on clinical context
+
+═════════════════════════════════════════════════════════════════════════════
+
+DISCLAIMER: This is an AI-generated research report for training/research 
+purposes only. NOT a clinical diagnosis. Must be reviewed by a qualified 
+radiologist before any clinical use.
+
+═════════════════════════════════════════════════════════════════════════════
+
+                                AI Clinical Report Generator
+                            Generated: 24-Jun-2026 10:07:11 AM
+                        RESEARCH/TRAINING PURPOSES ONLY - NOT FOR CLINICAL USE
