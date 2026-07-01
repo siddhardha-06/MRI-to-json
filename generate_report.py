@@ -33,6 +33,9 @@ def format_clinical_report(patient_id: str, features: dict, clinical_summary: st
     csf_pct = tissue_seg.get("csf_ventricles", {}).get("percentage", 0)
     gm_pct = tissue_seg.get("gray_matter", {}).get("percentage", 0)
     wm_pct = tissue_seg.get("white_matter", {}).get("percentage", 0)
+    otsu_t1 = tissue_seg.get("otsu_threshold_1", 0)
+    otsu_t2 = tissue_seg.get("otsu_threshold_2", 0)
+    gm_wm_cnr = tissue_seg.get("gm_wm_cnr", 0)
     
     # Extract texture features
     texture = features.get("texture_features", {})
@@ -43,8 +46,19 @@ def format_clinical_report(patient_id: str, features: dict, clinical_summary: st
     # Extract structural features
     struct = features.get("structural_features", {})
     brain_area_pct = struct.get("brain_area_pct", 0)
+    ventricular_proxy = struct.get("ventricular_proxy_pct", 0)
     symmetry = features.get("symmetry", {})
     bilateral_sym = symmetry.get("bilateral_symmetry_score", 0)
+    
+    # Extract frequency and edge features
+    freq = features.get("frequency_domain", {})
+    low_freq = freq.get("low_frequency_energy", 0)
+    high_freq = freq.get("high_frequency_energy", 0)
+    freq_ratio = freq.get("frequency_energy_ratio", 0)
+    
+    edges = features.get("edge_features", {})
+    edge_sharpness = edges.get("cortical_edge_sharpness", 0)
+    edge_std = edges.get("cortical_edge_std", 0)
     
     # Extract pathology flags
     pathology = features.get("pathology_indicators", {})
@@ -84,6 +98,8 @@ Tissue Segmentation:
     • Cerebrospinal Fluid (CSF): {csf_pct:.2f}%
     • Gray Matter: {gm_pct:.2f}%
     • White Matter: {wm_pct:.2f}%
+    • GM/WM Contrast-to-Noise Ratio (CNR): {gm_wm_cnr:.4f}
+    • Adaptive Thresholds (Otsu): {otsu_t1:.4f}, {otsu_t2:.4f}
     ▶ {clinical_summary.split('Tissue Segmentation:')[1].split('Texture')[0].strip() if 'Tissue Segmentation:' in clinical_summary else 'Tissue volumes assessed quantitatively.'}
 
 Texture Analysis:
@@ -96,7 +112,15 @@ Structural and Symmetry Metrics:
     • Brain Volume: Within normal limits
     • Bilateral Symmetry Index: {bilateral_sym:.4f}
     • Brain Area Coverage: {brain_area_pct:.2f}%
+    • Ventricular Proxy Index: {ventricular_proxy:.2f}%
     ▶ Structural metrics evaluated for gross abnormalities and asymmetry.
+
+Frequency & Edge Sharpness Analysis:
+    • Low-Frequency Energy: {low_freq:.4f}
+    • High-Frequency Energy: {high_freq:.4f}
+    • FFT Energy Ratio: {freq_ratio:.4f}
+    • Cortical Edge Sharpness: {edge_sharpness:.4f} (std: {edge_std:.4f})
+    ▶ Frequency and edge profiles analyze structural transitions and signal complexity.
 
 Parenchyma:
     • Normal gray-white matter differentiation

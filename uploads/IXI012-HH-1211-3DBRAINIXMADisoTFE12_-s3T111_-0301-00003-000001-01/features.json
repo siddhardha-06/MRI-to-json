@@ -1,0 +1,132 @@
+{
+  "schema_version": "1.0",
+  "scan_metadata": {
+    "filename": "IXI012-HH-1211-3DBRAINIXMADisoTFE12_-s3T111_-0301-00003-000001-01.nii",
+    "modality": "MRI",
+    "orientation": "axial",
+    "image_height": 256,
+    "image_width": 256,
+    "total_pixels": 65536,
+    "bit_depth": 16,
+    "color_space": "grayscale",
+    "format": "NIfTI"
+  },
+  "intensity_statistics": {
+    "mean": 0.19217610359191895,
+    "std": 0.16760076582431793,
+    "min": 0.0,
+    "max": 1.0,
+    "median": 0.18681319057941437,
+    "percentile_25": 0.008547008968889713,
+    "percentile_75": 0.3125763237476349,
+    "skewness": 0.4883241057395935,
+    "kurtosis": -0.6713323593139648,
+    "dynamic_range": 1.0
+  },
+  "tissue_segmentation": {
+    "background": {
+      "pixel_count": 0,
+      "percentage": 0.0,
+      "mean_intensity": 0.0,
+      "std_intensity": 0.0
+    },
+    "csf_ventricles": {
+      "pixel_count": 0,
+      "percentage": 30.55419921875,
+      "mean_intensity": 0.0,
+      "std_intensity": 0.0
+    },
+    "gray_matter": {
+      "pixel_count": 0,
+      "percentage": 34.5733642578125,
+      "mean_intensity": 0.0,
+      "std_intensity": 0.0
+    },
+    "white_matter": {
+      "pixel_count": 0,
+      "percentage": 2.97698974609375,
+      "mean_intensity": 0.0,
+      "std_intensity": 0.0
+    },
+    "brain_tissue_total_pct": 37.55035400390625
+  },
+  "texture_features": {
+    "glcm_contrast": 0.292635990364283,
+    "glcm_correlation": 0.8998261007077255,
+    "glcm_energy": 0.4389256829160664,
+    "glcm_homogeneity": 0.880274696953288,
+    "mean_gradient": 0.03752840310335159,
+    "std_gradient": 0.043022461235523224,
+    "max_gradient": 0.4409675598144531,
+    "shannon_entropy": -17.403853918344957,
+    "interpretation": {
+      "high_entropy_means": "complex brain texture",
+      "low_entropy_means": "uniform / potentially atrophied regions",
+      "high_contrast_means": "strong tissue boundaries present",
+      "high_homogeneity_means": "smooth, uniform intensity regions"
+    }
+  },
+  "structural_features": {
+    "brain_area_pixels": 0,
+    "brain_area_pct": 68.00994873046875,
+    "bounding_box": {
+      "min_row": 4,
+      "min_col": 0,
+      "max_row": 255,
+      "max_col": 241
+    },
+    "centroid": {
+      "row": 127.91687420071347,
+      "col": 115.97312153642503
+    },
+    "eccentricity": 0.49845225291492473,
+    "solidity": 0.8877624188344022,
+    "extent": 0.7368203534410077,
+    "perimeter": 4039.609665440988,
+    "interpretation": {
+      "solidity_close_to_1": "compact, healthy brain shape",
+      "eccentricity_near_0": "circular",
+      "eccentricity_near_1": "elongated"
+    }
+  },
+  "symmetry": {
+    "bilateral_symmetry_score": 0.721630075221128,
+    "asymmetry_index_pct": 3.659616470336914,
+    "interpretation": "Bilateral symmetry comparison"
+  },
+  "pathology_indicators": {
+    "flags": [],
+    "risk_level": "LOW"
+  },
+  "rule_based_array": [
+    0.19217610359191895,
+    0.16760076582431793,
+    0.0,
+    1.0,
+    0.18681319057941437,
+    0.008547008968889713,
+    0.3125763237476349,
+    0.4883241057395935,
+    -0.6713323593139648,
+    1.0,
+    30.55419921875,
+    34.5733642578125,
+    2.97698974609375,
+    37.55035400390625,
+    0.292635990364283,
+    0.8998261007077255,
+    0.4389256829160664,
+    0.880274696953288,
+    0.03752840310335159,
+    0.043022461235523224,
+    0.4409675598144531,
+    -17.403853918344957,
+    68.00994873046875,
+    0.49845225291492473,
+    0.8877624188344022,
+    0.7368203534410077,
+    4039.609665440988,
+    0.721630075221128,
+    3.659616470336914
+  ]
+}

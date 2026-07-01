@@ -33,13 +33,25 @@ print(f"   Std across all: {all_features.std():.4f}")
 # 4. Per-feature stats
 print(f"\n[INFO] Per-feature breakdown (feature ranges):")
 feature_names = [
+    # Intensity Statistics (12)
     "intensity_mean", "intensity_std", "intensity_min", "intensity_max", "intensity_median",
     "intensity_p25", "intensity_p75", "intensity_skew", "intensity_kurt", "intensity_range",
+    "intensity_mode", "intensity_bimodality",
+    # Tissue Segmentation (7)
     "tissue_csf%", "tissue_gm%", "tissue_wm%", "tissue_brain%",
+    "tissue_otsu1", "tissue_otsu2", "tissue_cnr",
+    # Texture Features (8)
     "texture_contrast", "texture_correlation", "texture_energy", "texture_homogeneity",
     "texture_grad_mean", "texture_grad_std", "texture_grad_max", "texture_entropy",
+    # Structural Features (6)
     "struct_area%", "struct_ecc", "struct_solid", "struct_extent", "struct_perim",
-    "symm_score", "symm_asym%"
+    "struct_ventricle%",
+    # Symmetry Features (2)
+    "symm_score", "symm_asym%",
+    # Frequency Domain (3)
+    "freq_low_energy", "freq_high_energy", "freq_ratio",
+    # Edge Features (2)
+    "edge_sharpness", "edge_std"
 ]
 
 for i in range(num_features):

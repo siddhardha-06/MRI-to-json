@@ -1,0 +1,163 @@
+{
+  "schema_version": "1.1",
+  "scan_metadata": {
+    "filename": "IXI022-Guys-0701-IXI3DMPRAG_-s231_-0301-00003-000001-01.nii",
+    "modality": "MRI",
+    "orientation": "axial",
+    "image_height": 256,
+    "image_width": 256,
+    "total_pixels": 65536,
+    "bit_depth": 16,
+    "color_space": "grayscale",
+    "format": "NIfTI"
+  },
+  "intensity_statistics": {
+    "mean": 0.4847,
+    "std": 0.218,
+    "min": 0.0513,
+    "max": 1.0,
+    "median": 0.4997,
+    "percentile_25": 0.3232,
+    "percentile_75": 0.6248,
+    "skewness": 0.0453,
+    "kurtosis": -0.4579,
+    "dynamic_range": 0.9487,
+    "mode": 0.5408,
+    "bimodality": 0.4039
+  },
+  "tissue_segmentation": {
+    "background": {
+      "pixel_count": 0,
+      "percentage": 0.0,
+      "mean_intensity": 0.0,
+      "std_intensity": 0.0
+    },
+    "csf_ventricles": {
+      "pixel_count": 0,
+      "percentage": 31.43,
+      "mean_intensity": 0.0,
+      "std_intensity": 0.0
+    },
+    "gray_matter": {
+      "pixel_count": 0,
+      "percentage": 48.39,
+      "mean_intensity": 0.0,
+      "std_intensity": 0.0
+    },
+    "white_matter": {
+      "pixel_count": 0,
+      "percentage": 20.18,
+      "mean_intensity": 0.0,
+      "std_intensity": 0.0
+    },
+    "brain_tissue_total_pct": 68.57,
+    "otsu_threshold_1": 0.3755,
+    "otsu_threshold_2": 0.6557,
+    "gm_wm_cnr": 2.6068
+  },
+  "texture_features": {
+    "glcm_contrast": 0.8729,
+    "glcm_correlation": 0.8986,
+    "glcm_energy": 0.3023,
+    "glcm_homogeneity": 0.7744,
+    "mean_gradient": 0.0758,
+    "std_gradient": 0.081,
+    "max_gradient": 0.6617,
+    "shannon_entropy": 3.7677,
+    "interpretation": {
+      "high_entropy_means": "complex brain texture (generally healthy)",
+      "low_entropy_means": "uniform / possibly atrophied regions",
+      "high_contrast_means": "strong tissue boundaries present",
+      "high_homogeneity_means": "smooth, uniform intensity regions"
+    }
+  },
+  "structural_features": {
+    "brain_area_pixels": 0,
+    "brain_area_pct": 71.58,
+    "bounding_box": {
+      "min_row": 6,
+      "min_col": 0,
+      "max_row": 250,
+      "max_col": 240
+    },
+    "centroid": {
+      "row": 134.7478639083302,
+      "col": 112.788201267304
+    },
+    "eccentricity": 0.3276,
+    "solidity": 0.9129,
+    "extent": 0.7886,
+    "perimeter": 2956.4,
+    "ventricular_proxy_pct": 20.16,
+    "interpretation": {
+      "solidity_close_to_1": "compact, healthy brain shape",
+      "low_solidity": "normal compact boundary",
+      "eccentricity_near_0": "circular (axial slice normal)",
+      "eccentricity_near_1": "standard slice orientation"
+    }
+  },
+  "symmetry": {
+    "bilateral_symmetry_score": 0.6105,
+    "left_hemisphere_mean": 0.5015,
+    "right_hemisphere_mean": 0.4679,
+    "asymmetry_index_pct": 6.93,
+    "interpretation": "Mild asymmetry detected \u2014 review structural alignment"
+  },
+  "frequency_domain": {
+    "low_frequency_energy": 4.0882,
+    "high_frequency_energy": 24.8868,
+    "frequency_energy_ratio": 0.1643
+  },
+  "edge_features": {
+    "cortical_edge_sharpness": 0.1173,
+    "cortical_edge_std": 0.1035
+  },
+  "pathology_indicators": {
+    "total_flags": 0,
+    "risk_level": "low",
+    "flags": [],
+    "disclaimer": "These are AI training indicators only, NOT clinical diagnoses."
+  },
+  "rule_based_array": [
+    0.48468542376307067,
+    0.21802302725089734,
+    0.051265889455165026,
+    0.9999999937133832,
+    0.4997145951456542,
+    0.3232216166559406,
+    0.624791441184657,
+    0.04525641467231693,
+    -0.4578510678746836,
+    0.9487341042582184,
+    0.5408235848295744,
+    0.40387577516866974,
+    31.426594753316124,
+    48.38980439437331,
+    20.18360085231057,
+    68.57340524668388,
+    0.3755414949971117,
+    0.6557162837074022,
+    2.606825563918065,
+    0.8729480388573521,
+    0.8985543295166879,
+    0.3022827765026985,
+    0.7743500855760503,
+    0.07575267810360797,
+    0.08102787154624402,
+    0.6616708568777107,
+    3.7677133370961338,
+    71.5771484375,
+    0.3276356158102029,
+    0.9129400180274867,
+    0.7886347067533639,
+    2956.447494433685,
+    20.157189521660293,
+    0.6105284915725319,
+    6.9265205180445975,
+    4.088246102922436,
+    24.88678976292392,
+    0.16431221311630725,
+    0.1172938559914704,
+    0.10354289739807294
+  ]
+}

@@ -149,7 +149,7 @@ def step_3_train_unet(
 def step_4_train_regressor(
     mri_dir="ixi-t1",
     features_file="rule_based_features.json",
-    num_features=29,
+    num_features=40,
     epochs=100,
     batch_size=32,
     save_dir="checkpoints",
@@ -407,7 +407,7 @@ Examples:
     # Regressor
     parser.add_argument("--regressor-epochs", type=int, default=100, help="Regressor epochs")
     parser.add_argument("--regressor-batch-size", type=int, default=32, help="Regressor batch size")
-    parser.add_argument("--num-features", type=int, default=29, help="Number of features to predict")
+    parser.add_argument("--num-features", type=int, default=40, help="Number of features to predict")
     
     args = parser.parse_args()
     

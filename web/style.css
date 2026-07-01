@@ -556,6 +556,12 @@ body {
     font-weight: 500;
 }
 
+.toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
 .toolbar-meta {
     display: flex;
     gap: 10px;

@@ -12,6 +12,7 @@ import threading
 import time
 import urllib.parse
 import webbrowser
+import torch
 
 # Core imports for on-the-fly feature extraction
 import numpy as np
@@ -62,116 +63,28 @@ def load_mri_slice(path: str) -> np.ndarray:
 
 
 def run_feature_extraction(mri_path: str):
-    """Run full 29-feature extraction on NIfTI file and return structures"""
+    """Run full 40-feature extraction on NIfTI file and return structures"""
+    # 1. Compute on-the-fly features using 5-slice average from extract_features
+    from extract_features import extract_all_features
+    flat_vector = extract_all_features(mri_path)
+    
+    # 2. Load middle slice for bbox and centroid overlay drawing
     arr = load_mri_slice(mri_path)
-    total = arr.size
     
-    # 1. Intensity (10 features)
-    flat = arr.flatten()
-    mean_val = float(np.mean(flat))
-    std_val = float(np.std(flat))
-    min_val = float(np.min(flat))
-    max_val = float(np.max(flat))
-    median_val = float(np.median(flat))
-    p25 = float(np.percentile(flat, 25))
-    p75 = float(np.percentile(flat, 75))
-    skewness = float(stats.skew(flat))
-    kurtosis = float(stats.kurtosis(flat))
-    dyn_range = float(max_val - min_val)
-    
-    # 2. Tissue (4 features)
-    bg_mask = arr < 0.05
-    csf_mask = (arr >= 0.05) & (arr < 0.25)
-    gm_mask = (arr >= 0.25) & (arr < 0.55)
-    wm_mask = arr >= 0.55
-    
-    csf_pct = float((csf_mask.sum() / total) * 100)
-    gm_pct = float((gm_mask.sum() / total) * 100)
-    wm_pct = float((wm_mask.sum() / total) * 100)
-    brain_tissue_pct = float(((gm_mask.sum() + wm_mask.sum()) / total) * 100)
-    
-    # 3. Texture (8 features)
-    arr_u8 = (arr * 255).astype(np.uint8)
-    arr_binned = (arr_u8 // 32).astype(np.uint8)
-    
-    glcm = graycomatrix(
-        arr_binned,
-        distances=[1],
-        angles=[0, np.pi/4, np.pi/2, 3*np.pi/4],
-        levels=8,
-        symmetric=True,
-        normed=True
-    )
-    
-    grad_y, grad_x = np.gradient(arr)
-    grad_mag = np.sqrt(grad_x**2 + grad_y**2)
-    
-    hist, _ = np.histogram(arr, bins=16, range=(0, 1), density=True)
-    hist = hist + 1e-10
-    entropy = float(-np.sum(hist * np.log2(hist)))
-    
-    glcm_contrast = float(graycoprops(glcm, 'contrast').mean())
-    glcm_correlation = float(graycoprops(glcm, 'correlation').mean())
-    glcm_energy = float(graycoprops(glcm, 'energy').mean())
-    glcm_homogeneity = float(graycoprops(glcm, 'homogeneity').mean())
-    mean_gradient = float(grad_mag.mean())
-    std_gradient = float(grad_mag.std())
-    max_gradient = float(grad_mag.max())
-    
-    # 4. Structural (5 features)
     brain_mask = arr > 0.05
     labeled = measure.label(brain_mask)
     regions = measure.regionprops(labeled)
     
-    brain_area_pct = 0.0
-    eccentricity = 0.0
-    solidity = 0.0
-    extent = 0.0
-    perimeter = 0.0
-    
-    # Coordinates for drawing overlay
     centroid_row = 128.0
     centroid_col = 128.0
     bbox_min_row, bbox_min_col, bbox_max_row, bbox_max_col = 0, 0, 256, 256
     
     if regions:
         brain = max(regions, key=lambda r: r.area)
-        brain_area_pct = float((brain.area / total) * 100)
-        eccentricity = float(brain.eccentricity)
-        solidity = float(brain.solidity)
-        extent = float(brain.extent)
-        perimeter = float(brain.perimeter)
-        
         centroid_row = float(brain.centroid[0])
         centroid_col = float(brain.centroid[1])
         bbox_min_row, bbox_min_col, bbox_max_row, bbox_max_col = [int(v) for v in brain.bbox]
-
-    # 5. Symmetry (2 features)
-    mid_col = arr.shape[1] // 2
-    left_half = arr[:, :mid_col]
-    right_half = arr[:, mid_col:]
-    
-    min_size = min(left_half.shape[1], right_half.shape[1])
-    left_half = left_half[:, :min_size]
-    right_half = right_half[:, :min_size]
-    
-    right_half_flipped = np.fliplr(right_half)
-    correlation = np.corrcoef(left_half.flatten(), right_half_flipped.flatten())[0, 1]
-    if np.isnan(correlation):
-        correlation = 0.0
         
-    symmetry_score = (correlation + 1) / 2
-    asymmetry_idx = abs(left_half.mean() - right_half.mean()) * 100
-    
-    # Flattened array
-    flat_vector = [
-        mean_val, std_val, min_val, max_val, median_val, p25, p75, skewness, kurtosis, dyn_range,
-        csf_pct, gm_pct, wm_pct, brain_tissue_pct,
-        glcm_contrast, glcm_correlation, glcm_energy, glcm_homogeneity, mean_gradient, std_gradient, max_gradient, entropy,
-        brain_area_pct, eccentricity, solidity, extent, perimeter,
-        symmetry_score, asymmetry_idx
-    ]
-    
     return {
         "rule_based_vector": flat_vector,
         "centroid": {"row": centroid_row, "col": centroid_col},
@@ -427,7 +340,13 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
             try:
                 with open(FEATURES_FILE, 'r') as f:
                     data = json.load(f)
-                    patients.extend(list(data.keys()))
+                    if "schema_version" in data:
+                        pred_filename = data.get("scan_metadata", {}).get("filename", "")
+                        pred_patient_id = pathlib.Path(pred_filename).stem if pred_filename else ""
+                        if pred_patient_id:
+                            patients.append(pred_patient_id)
+                    else:
+                        patients.extend(list(data.keys()))
             except Exception as e:
                 print("Error loading features keys:", e)
                 
@@ -487,8 +406,10 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
                     # Cache it
                     cache_payload = feature_data.copy()
                     cache_payload["rule_based_array"] = rule_based_vector
-                    with open(cache_file, 'w') as f:
+                    temp_cache_file = cache_file + ".tmp"
+                    with open(temp_cache_file, 'w') as f:
                         json.dump(cache_payload, f, indent=2)
+                    os.replace(temp_cache_file, cache_file)
                         
                 except Exception as e:
                     self.send_error(500, f"On-the-fly extraction failed: {str(e)}")
@@ -499,7 +420,13 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
                 try:
                     with open(FEATURES_FILE, 'r') as f:
                         all_pred = json.load(f)
-                        feature_data = all_pred.get(patient_id)
+                        if "schema_version" in all_pred:
+                            pred_filename = all_pred.get("scan_metadata", {}).get("filename", "")
+                            pred_patient_id = pathlib.Path(pred_filename).stem if pred_filename else ""
+                            if patient_id == pred_patient_id:
+                                feature_data = all_pred
+                        else:
+                            feature_data = all_pred.get(patient_id)
                 except Exception as e:
                     print("Error loading features:", e)
             
@@ -772,127 +699,24 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
 # =============================================================================
 
 def features_list_to_dict(filename, features):
-    """Maps the raw 29-element float list to the output schema format"""
-    intensity = {
-        "mean": float(features[0]),
-        "std": float(features[1]),
-        "min": float(features[2]),
-        "max": float(features[3]),
-        "median": float(features[4]),
-        "percentile_25": float(features[5]),
-        "percentile_75": float(features[6]),
-        "skewness": float(features[7]),
-        "kurtosis": float(features[8]),
-        "dynamic_range": float(features[9])
-    }
-    
-    tissue = {
-        "background": {
-            "pixel_count": 0,
-            "percentage": 0.0,
-            "mean_intensity": 0.0,
-            "std_intensity": 0.0
-        },
-        "csf_ventricles": {
-            "pixel_count": 0,
-            "percentage": float(features[10]),
-            "mean_intensity": 0.0,
-            "std_intensity": 0.0
-        },
-        "gray_matter": {
-            "pixel_count": 0,
-            "percentage": float(features[11]),
-            "mean_intensity": 0.0,
-            "std_intensity": 0.0
-        },
-        "white_matter": {
-            "pixel_count": 0,
-            "percentage": float(features[12]),
-            "mean_intensity": 0.0,
-            "std_intensity": 0.0
-        },
-        "brain_tissue_total_pct": float(features[13])
-    }
-    
-    texture = {
-        "glcm_contrast": float(features[14]),
-        "glcm_correlation": float(features[15]),
-        "glcm_energy": float(features[16]),
-        "glcm_homogeneity": float(features[17]),
-        "mean_gradient": float(features[18]),
-        "std_gradient": float(features[19]),
-        "max_gradient": float(features[20]),
-        "shannon_entropy": float(features[21]),
-        "interpretation": {
-            "high_entropy_means": "complex brain texture",
-            "low_entropy_means": "uniform / potentially atrophied regions",
-            "high_contrast_means": "strong tissue boundaries present",
-            "high_homogeneity_means": "smooth, uniform intensity regions"
-        }
-    }
-    
-    structural = {
-        "brain_area_pixels": 0,
-        "brain_area_pct": float(features[22]),
-        "bounding_box": {
-            "min_row": 30, "min_col": 30, "max_row": 226, "max_col": 226
-        },
-        "centroid": {
-            "row": 128.0, "col": 128.0
-        },
-        "eccentricity": float(features[23]),
-        "solidity": float(features[24]),
-        "extent": float(features[25]),
-        "perimeter": float(features[26]),
-        "interpretation": {
-            "solidity_close_to_1": "compact, healthy brain shape",
-            "eccentricity_near_0": "circular",
-            "eccentricity_near_1": "elongated"
-        }
-    }
-    
-    symmetry = {
-        "bilateral_symmetry_score": float(features[27]),
-        "asymmetry_index_pct": float(features[28]),
-        "interpretation": "Bilateral symmetry comparison"
-    }
-    
-    return {
-        "schema_version": "1.0",
-        "scan_metadata": {
-            "filename": filename,
-            "modality": "MRI",
-            "orientation": "axial",
-            "image_height": 256,
-            "image_width": 256,
-            "total_pixels": 65536,
-            "bit_depth": 16,
-            "color_space": "grayscale",
-            "format": "NIfTI"
-        },
-        "intensity_statistics": intensity,
-        "tissue_segmentation": tissue,
-        "texture_features": texture,
-        "structural_features": structural,
-        "symmetry": symmetry,
-        "pathology_indicators": {
-            "flags": [],
-            "risk_level": "LOW"
-        }
-    }
+    """Maps the raw 40-element float list to the output schema format"""
+    from train_regressor import build_structured_json
+    return build_structured_json(features, filename)
 
 
 def flatten_feature_dict(d: dict) -> list:
-    """Helper to reconstruct flat 29-element list from structured predicted features dict"""
+    """Helper to reconstruct flat 40-element list from structured predicted features dict"""
     try:
         intensity = d.get("intensity_statistics", {})
         tissue = d.get("tissue_segmentation", {})
         texture = d.get("texture_features", {})
         struct = d.get("structural_features", {})
         symmetry = d.get("symmetry", {})
+        freq = d.get("frequency_domain", {})
+        edge = d.get("edge_features", {})
         
         flat = [
-            # Intensity (10)
+            # Intensity (12)
             intensity.get("mean", 0.0),
             intensity.get("std", 0.0),
             intensity.get("min", 0.0),
@@ -903,11 +727,16 @@ def flatten_feature_dict(d: dict) -> list:
             intensity.get("skewness", 0.0),
             intensity.get("kurtosis", 0.0),
             intensity.get("dynamic_range", 0.0),
-            # Tissue (4)
+            intensity.get("mode", 0.0),
+            intensity.get("bimodality", 0.0),
+            # Tissue (7)
             tissue.get("csf_ventricles", {}).get("percentage", 0.0),
             tissue.get("gray_matter", {}).get("percentage", 0.0),
             tissue.get("white_matter", {}).get("percentage", 0.0),
             tissue.get("brain_tissue_total_pct", 0.0),
+            tissue.get("otsu_threshold_1", 0.0),
+            tissue.get("otsu_threshold_2", 0.0),
+            tissue.get("gm_wm_cnr", 0.0),
             # Texture (8)
             texture.get("glcm_contrast", 0.0),
             texture.get("glcm_correlation", 0.0),
@@ -917,15 +746,23 @@ def flatten_feature_dict(d: dict) -> list:
             texture.get("std_gradient", 0.0),
             texture.get("max_gradient", 0.0),
             texture.get("shannon_entropy", 0.0),
-            # Structural (5)
+            # Structural (6)
             struct.get("brain_area_pct", 0.0),
             struct.get("eccentricity", 0.0),
             struct.get("solidity", 0.0),
             struct.get("extent", 0.0),
             struct.get("perimeter", 0.0),
+            struct.get("ventricular_proxy_pct", 0.0),
             # Symmetry (2)
             symmetry.get("bilateral_symmetry_score", 0.0),
-            symmetry.get("asymmetry_index_pct", 0.0)
+            symmetry.get("asymmetry_index_pct", 0.0),
+            # Frequency (3)
+            freq.get("low_frequency_energy", 0.0),
+            freq.get("high_frequency_energy", 0.0),
+            freq.get("frequency_energy_ratio", 0.0),
+            # Edge (2)
+            edge.get("cortical_edge_sharpness", 0.0),
+            edge.get("cortical_edge_std", 0.0)
         ]
         return flat
     except Exception as e:
@@ -957,8 +794,8 @@ def create_temp_uploads_features_json() -> str:
 # =============================================================================
 
 def start_server():
-    socketserver.TCPServer.allow_reuse_address = True
-    with socketserver.TCPServer(("", PORT), DashboardAPIHandler) as httpd:
+    socketserver.ThreadingTCPServer.allow_reuse_address = True
+    with socketserver.ThreadingTCPServer(("", PORT), DashboardAPIHandler) as httpd:
         print(f"\n==================================================")
         print(f" NeuroSphere Dashboard running at: http://localhost:{PORT}")
         print(f" Press Ctrl+C to terminate the server process.")

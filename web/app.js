@@ -44,6 +44,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Report
     const reportPaper = document.getElementById("report-text-content");
     const printReportBtn = document.getElementById("btn-print-report");
+    const downloadReportBtn = document.getElementById("btn-download-report");
 
     // Console
     const consoleOutput = document.getElementById("console-output");
@@ -67,21 +68,27 @@ document.addEventListener("DOMContentLoaded", () => {
         6: document.getElementById("badge-step-5") // combined badge
     };
 
-    // Mapping 29-dimension features array indexes to readable names
+    // Mapping 40-dimension features array indexes to readable names
     const FEATURE_NAMES = [
-        /* 0 - 9: Intensity */
+        /* 0 - 11: Intensity */
         "Intensity Mean", "Intensity Std", "Intensity Min", "Intensity Max", "Intensity Median", 
         "Percentile 25", "Percentile 75", "Skewness", "Kurtosis", "Dynamic Range",
-        /* 10 - 13: Tissue */
+        "Intensity Mode", "Bimodality Coefficient",
+        /* 12 - 18: Tissue */
         "CSF Percentage", "Gray Matter Percentage", "White Matter Percentage", "Total Brain Tissue Pct",
-        /* 14 - 21: Texture */
+        "Otsu Threshold 1", "Otsu Threshold 2", "GM/WM CNR",
+        /* 19 - 26: Texture */
         "GLCM Contrast", "GLCM Correlation", "GLCM Energy", "GLCM Homogeneity", 
         "Mean Gradient", "Std Gradient", "Max Gradient", "Shannon Entropy",
-        /* 22 - 26: Structural */
+        /* 27 - 32: Structural */
         "Brain Area Percentage", "Eccentricity (Ovalness)", "Solidity (Compactness)", 
-        "Extent", "Perimeter Length",
-        /* 27 - 28: Symmetry */
-        "Bilateral Symmetry Score", "Asymmetry Index %"
+        "Extent", "Perimeter Length", "Ventricular Proxy Index %",
+        /* 33 - 34: Symmetry */
+        "Bilateral Symmetry Score", "Hemisphere Asymmetry Index %",
+        /* 35 - 37: Frequency */
+        "Low Frequency Energy", "High Frequency Energy", "Frequency Energy Ratio",
+        /* 38 - 39: Edge */
+        "Cortical Edge Sharpness", "Cortical Edge Std"
     ];
 
     // Initialize UI
@@ -189,6 +196,36 @@ document.addEventListener("DOMContentLoaded", () => {
             `);
             printWindow.document.close();
         });
+
+        // Download Report button
+        downloadReportBtn.addEventListener("click", () => {
+            if (!activePatientId) return;
+            const reportText = document.getElementById("report-text-content").innerText;
+            const blob = new Blob([reportText], { type: "text/plain" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `${activePatientId}_report.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        // Download JSON button
+        const downloadJsonBtn = document.getElementById("btn-download-json");
+        downloadJsonBtn.addEventListener("click", () => {
+            if (!patientData) return;
+            const blob = new Blob([JSON.stringify(patientData, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `${activePatientId}_features.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
     }
 
     // Fetch details of CUDA support & Pipeline state
@@ -242,6 +279,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     analysisViewport.style.display = "none";
                     activeScanName.textContent = "No Scan Uploaded Yet";
                     metadataSummary.innerHTML = `<span class="meta-tag">Awaiting Scan Upload</span>`;
+                    document.getElementById("btn-download-json").style.display = "none";
                 }
             })
             .catch(err => {
@@ -259,6 +297,7 @@ document.addEventListener("DOMContentLoaded", () => {
         emptyViewport.style.display = "none";
         analysisViewport.style.display = "flex";
         metadataSummary.innerHTML = `<span class="meta-tag">Loading details...</span>`;
+        document.getElementById("btn-download-json").style.display = "none";
         
         fetch(`/api/features/${patientId}`)
             .then(res => res.json())
@@ -266,6 +305,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 patientData = data;
                 renderPatientDetails();
                 drawBrainSlice();
+                document.getElementById("btn-download-json").style.display = "inline-flex";
             })
             .catch(err => {
                 appendConsoleLog(`Error fetching features for patient ${patientId}`, "error-msg");

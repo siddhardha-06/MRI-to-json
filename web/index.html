@@ -198,8 +198,11 @@
                             <span class="active-scan-label">Active MRI Scan:</span>
                             <strong id="active-scan-name" class="text-glow">No Scan Uploaded Yet</strong>
                         </div>
-                        <div class="toolbar-meta" id="scan-metadata-summary">
-                            <span class="meta-tag">Awaiting Scan Upload</span>
+                        <div class="toolbar-actions">
+                            <div class="toolbar-meta" id="scan-metadata-summary">
+                                <span class="meta-tag">Awaiting Scan Upload</span>
+                            </div>
+                            <button class="btn btn-outline" id="btn-download-json" style="display: none;">📥 Download JSON</button>
                         </div>
                     </div>
                 </div>
@@ -279,7 +282,7 @@
                     <div class="viewport-tabs flex-grow flex-column">
                         <div class="tabs-nav">
                             <button class="tab-btn active" data-tab="tab-metrics" id="btn-tab-metrics">Quantitative Metrics</button>
-                            <button class="tab-btn" data-tab="tab-comparison" id="btn-tab-comparison">Features Comparison (29 Dims)</button>
+                            <button class="tab-btn" data-tab="tab-comparison" id="btn-tab-comparison">Features Comparison (40 Dims)</button>
                             <button class="tab-btn" data-tab="tab-report" id="btn-tab-report">Gemini Clinical Report</button>
                         </div>
 
@@ -316,7 +319,7 @@
                             <!-- Tab 2: Feature Comparisons -->
                             <div class="tab-pane" id="tab-comparison">
                                 <div class="comparison-summary">
-                                    <p>Comparing flat 29-dimensional vectors: <strong>Rule-Based Pipeline (Ground Truth)</strong> vs. <strong>Regressor Model Predictions</strong>.</p>
+                                    <p>Comparing flat 40-dimensional vectors: <strong>Rule-Based Pipeline (Ground Truth)</strong> vs. <strong>Regressor Model Predictions</strong>.</p>
                                     <div class="comparison-status-banner" id="comparison-status-text">
                                         Model predictions match ground truth within acceptable error.
                                     </div>
@@ -345,6 +348,7 @@
                                 <div class="clinical-report-container">
                                     <div class="clinical-report-toolbar">
                                         <button class="btn btn-outline" id="btn-print-report">🖨️ Print Report</button>
+                                        <button class="btn btn-outline" id="btn-download-report">📥 Download Report</button>
                                     </div>
                                     
                                     <!-- Print Layout Clinical Document -->

@@ -9,8 +9,3 @@ ixi-t1-masks/
 *.nii.gz
 *.zip
 *.tar.gz
-
-# Model checkpoints and outputs
-checkpoints/
-features/
-predicted_features.json

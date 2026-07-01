@@ -1,0 +1,83 @@
+DEPARTMENT OF CLINICAL IMAGING & INTERVENTIONAL RADIOLOGY
+
+┌─────────────────────────────────────┬──────────────────────────────────────┐
+│ NAME                 │ IXI043       │ STUDY      │ 29-Jun-2026 11:09:49 AM │
+├──────────────────────┼──────────────┼────────────┼──────────────────────────┤
+│ AGE / GENDER         │ ---          │ UHID       │ IXI043-Guys-0714-IXI3DMPRAG_-s23 │
+├──────────────────────┼──────────────┼────────────┼──────────────────────────┤
+│ ACC NO               │ 240629IXI043 │ MOD        │ MR                       │
+├──────────────────────┼──────────────┼────────────┼──────────────────────────┤
+│ REFERRER             │ AI System    │ REPORT     │ 29-Jun-2026 11:09:49 AM │
+└──────────────────────┴──────────────┴────────────┴──────────────────────────┘
+
+MRI BRAIN - QUANTITATIVE ANALYSIS REPORT
+
+═════════════════════════════════════════════════════════════════════════════
+
+Clinical Indication:
+    Automated quantitative analysis of brain MRI features for research and 
+    clinical correlation purposes.
+
+═════════════════════════════════════════════════════════════════════════════
+
+FINDINGS:
+
+Tissue Segmentation:
+    • Cerebrospinal Fluid (CSF): 31.91%
+    • Gray Matter: 50.24%
+    • White Matter: 17.85%
+    ▶ Tissue volumes assessed using automated quantitative methods.
+
+Texture Analysis:
+    • GLCM Contrast: 0.8705
+    • GLCM Energy: 0.3119
+    • GLCM Homogeneity: 0.7837
+    ▶ Texture features quantified using Gray Level Co-occurrence Matrix.
+
+Structural and Symmetry Metrics:
+    • Brain Volume: Within normal limits
+    • Bilateral Symmetry Index: 0.6616
+    • Brain Area Coverage: 61.57%
+    ▶ Structural metrics evaluated for gross abnormalities and asymmetry.
+
+Parenchyma:
+    • Normal gray-white matter differentiation
+    • No focal mass lesions or signal abnormalities identified
+    • No evidence of cortical dysplasia or hippocampal sclerosis
+
+Pathology Indicators:
+    • Risk Level: MEDIUM
+    • No significant pathology flags detected
+
+═════════════════════════════════════════════════════════════════════════════
+
+IMPRESSION:
+
+This report summarizes quantitative MRI findings for patient IXI043-Guys-0714-IXI3DMPRAG_-s235_-0301-00003-000001-01.
+
+The quantitative MRI analysis reveals generally normal brain tissue composition and structure.
+Tissue segmentation shows cerebrospinal fluid (31.91%), gray matter (50.24%), and white matter (17.85%), suggesting normal global volume characteristics.
+Texture analysis indicates a complex brain parenchyma with Shannon entropy of 3.72, GLCM contrast of 0.8705, and GLCM homogeneity of 0.7837. These values suggest clear tissue boundaries and normal structural uniformness without signs of focal lesion variations.
+Structural analysis indicates a compact shape (solidity: 0.9191) and typical axial orientation (eccentricity: 0.5606). A calculated hemisphere asymmetry index of 6.27% indicates mild, non-pathological variation between hemispheres.
+Overall clinical flag risk assessment is LOW, with no significant pathology markers detected.
+
+═════════════════════════════════════════════════════════════════════════════
+
+RECOMMENDATIONS:
+
+• Clinical correlation with patient presentation and symptoms
+• Correlation with prior imaging if available
+• Neuroradiology review recommended
+• Follow-up imaging may be considered based on clinical context
+
+═════════════════════════════════════════════════════════════════════════════
+
+DISCLAIMER: This is an AI-generated research report for training/research 
+purposes only. NOT a clinical diagnosis. Must be reviewed by a qualified 
+radiologist before any clinical use.
+
+═════════════════════════════════════════════════════════════════════════════
+
+                                AI Clinical Report Generator
+                            Generated: 29-Jun-2026 11:09:49 AM
+                        RESEARCH/TRAINING PURPOSES ONLY - NOT FOR CLINICAL USE

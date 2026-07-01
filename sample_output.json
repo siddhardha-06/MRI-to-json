@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "scan_metadata": {
     "filename": "1781075422166_image.png",
     "modality": "MRI",
@@ -21,7 +21,9 @@
     "percentile_75": 0.5913,
     "skewness": 0.1732,
     "kurtosis": -1.4124,
-    "dynamic_range": 1.0
+    "dynamic_range": 1.0,
+    "mode": 0.3254,
+    "bimodality": 0.6432
   },
   "tissue_segmentation": {
     "background": {
@@ -48,7 +50,10 @@
       "mean_intensity": 0.6888,
       "std_intensity": 0.0896
     },
-    "brain_tissue_total_pct": 57.37
+    "brain_tissue_total_pct": 57.37,
+    "otsu_threshold_1": 0.2854,
+    "otsu_threshold_2": 0.5643,
+    "gm_wm_cnr": 2.1432
   },
   "texture_features": {
     "glcm_contrast": 0.5676,
@@ -58,7 +63,7 @@
     "mean_gradient": 0.0567,
     "std_gradient": 0.0627,
     "max_gradient": 0.4769,
-    "shannon_entropy": -10.3049,
+    "shannon_entropy": 3.4215,
     "interpretation": {
       "high_entropy_means": "complex brain texture (generally healthy)",
       "low_entropy_means": "uniform / possibly atrophied regions",
@@ -83,6 +88,7 @@
     "solidity": 0.9357,
     "extent": 0.7585,
     "perimeter": 1996.2,
+    "ventricular_proxy_pct": 2.14,
     "interpretation": {
       "solidity_close_to_1": "compact, healthy brain shape",
       "low_solidity": "possible irregular mass or artifact",
@@ -96,6 +102,15 @@
     "right_hemisphere_mean": 0.3319,
     "asymmetry_index_pct": 0.87,
     "interpretation": "High symmetry \u2014 no asymmetry detected"
+  },
+  "frequency_domain": {
+    "low_frequency_energy": 124.5432,
+    "high_frequency_energy": 12.3541,
+    "frequency_energy_ratio": 10.0811
+  },
+  "edge_features": {
+    "cortical_edge_sharpness": 0.0452,
+    "cortical_edge_std": 0.0125
   },
   "pathology_indicators": {
     "total_flags": 0,

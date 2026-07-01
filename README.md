@@ -1,452 +1,190 @@
-# MRI → Trained Model → Features → JSON Pipeline
+# MRI Quantitative Analysis & Clinical Report Pipeline
 
-Complete PyTorch-based pipeline for training neural networks on IXI MRI data and extracting learned features.
+Complete PyTorch-based pipeline for training neural networks on T1-weighted brain MRI scans, extracting anatomical/texture features, and generating LLM-powered clinical reports.
 
-## Pipeline Overview
+---
+
+## 🛠️ Virtual Environment & GPU Setup
+
+Since medical image processing and deep learning are compute-intensive, using your GPU (CUDA) is highly recommended. 
+
+### 1. Verify GPU Availability
+To confirm PyTorch can detect your NVIDIA graphics card, run:
+```powershell
+.\.venv\Scripts\python check_cuda.py
+```
+*(If it returns `CUDA available: False`, follow the step below to install the correct CUDA-enabled PyTorch binaries).*
+
+### 2. Install GPU-Enabled PyTorch (CUDA 12.1)
+If you do not have the GPU version of PyTorch, install it inside your virtual environment using:
+```powershell
+.\.venv\Scripts\pip install --force-reinstall torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+```
+
+### 3. Activate Virtual Environment (Alternative)
+If you prefer not to prefix every command with `.\.venv\Scripts\python`, activate the environment in your PowerShell terminal first:
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+Once activated, the command prompt will be prefixed with `(.venv)`, and you can use standard `python` commands.
+
+---
+
+## 🧬 Pipeline Architecture & Workflow
+
+The pipeline consists of a self-supervised representation model, a supervised segmentation model, a quantitative feature extractor, and a regressor to link raw MRI images directly to clinical summaries.
 
 ```
-IXI MRI Files (.nii)
-    ↓
-[Step 1] ANTsPy Atropos → Pseudo-labels (GM/WM/CSF masks)
-    ↓
-[Step 2] Train Autoencoder (self-supervised)  ← START HERE
-    ↓
-[Step 3] Train U-Net (with pseudo-labels)
-    ↓
-[Step 4] Train Feature Regressor (with rule-based GT)
-    ↓
-[Step 5] Extract Final Features → JSON
+                   MRI Files (.nii)
+                           │
+       ┌───────────────────┴───────────────────┐
+       ▼                                       ▼
+[Step 1] ANTsPy Atropos                 [Step 2] Train Autoencoder
+  (Bias field correction &                (Self-supervised learning of
+   tissue segmentation)                   general brain features)
+       │                                       │
+       ▼                                       ▼
+[Step 3] Train U-Net                     [Step 4] Extract Rule-Based Features
+  (Learns to segment GM/WM/CSF             (Extracts intensity, tissue, texture,
+   from raw MRI slices)                     structure, and symmetry features)
+                                               │
+                                               ▼
+                                        [Step 5] Train Feature Regressor
+                                          (Learns raw slice -> features)
+                                               │
+                                               ▼
+                                        [Step 6] Extract Final Features
+                                          (Produces predicted_features.json)
+                                               │
+                                               ▼
+                                        [Step 7] Clinical Reports (Gemini)
+                                          (Generates reports in reports/)
 ```
 
 ---
 
-## Model Training Order & Rationale
+## 🚀 Running the Pipeline
 
-### **Model 1: Autoencoder (Vision Encoder)** ✓ FIRST
-- **Why first?**
-  - Self-supervised — no labels needed
-  - Trains immediately on IXI data
-  - Learns general MRI representations
-  - Provides learned features for downstream tasks
-  
-- **Training:** MRI slice → Reconstruction
-- **Output:** Latent feature representations (128-256 dims)
-- **File:** `train_autoencoder.py`
-- **Time:** ~30-60 min on GPU (50 epochs)
+### Option A: Complete Automated Pipeline (Recommended)
+You can run the entire workflow end-to-end with a single orchestrator command:
+```powershell
+.\.venv\Scripts\python pipeline.py --ae-epochs 50 --unet-epochs 50 --regressor-epochs 100
+```
+This script handles the execution flow, performs validations, and creates all outputs automatically.
 
-### **Model 2: U-Net Segmentation** SECOND
-- **Why second?**
-  - Requires ANTsPy pseudo-labels (preprocessing step)
-  - Uses autoencoder backbone (optional improvement)
-  - Segments GM/WM/CSF regions
-  
-- **Training:** MRI → GM/WM/CSF segmentation masks
-- **Requires:** ANTsPy preprocessing (Step 1)
-- **File:** `train_unet.py`
-- **Time:** ~20-40 min on GPU (50 epochs)
+### Option B: Step-by-Step Execution (Manual Control)
 
-### **Model 3: Feature Regressor** THIRD
-- **Why third?**
-  - Depends on rule-based pipeline output
-  - Can leverage autoencoder features
-  - Directly predicts features from MRI
-  
-- **Training:** MRI → Predicted features
-- **Requires:** Rule-based features JSON as ground truth
-- **File:** `train_regressor.py`
-- **Time:** ~40-80 min on GPU (100 epochs)
+#### Step 1: Generate ANTsPy Tissue Segmentation Masks
+Generate high-quality tissue masks (Background, CSF, Gray Matter, White Matter) using ANTsPy Atropos (with N4 bias field correction):
+```powershell
+.\.venv\Scripts\python train_unet.py --generate-masks --mri-dir ixi-t1 --mask-dir ixi-t1-masks
+```
+*   *For a fast test run (e.g., first 3 files):* append `--limit 3` to the command.
+*   **Output**: `ixi-t1-masks/` containing `*_seg.nii` files.
+
+#### Step 2: Train Autoencoder (Self-Supervised)
+Train the representation learning network directly on raw MRI volumes:
+```powershell
+.\.venv\Scripts\python train_autoencoder.py --data-dir ixi-t1 --model-type 2d --epochs 50 --batch-size 8
+```
+*   **Output**: `checkpoints/autoencoder_2d_best.pth`
+
+#### Step 3: Train U-Net Segmentation Network
+Train the U-Net model using the generated ANTsPy pseudo-labels as ground truth:
+```powershell
+.\.venv\Scripts\python train_unet.py --mri-dir ixi-t1 --mask-dir ixi-t1-masks --epochs 50 --batch-size 16
+```
+*   **Output**: `checkpoints/unet_best.pth`
+
+#### Step 4: Extract Rule-Based Features
+Extract 29 anatomical and texture metrics from the middle slices of all raw MRIs to create training targets for the regressor:
+```powershell
+.\.venv\Scripts\python extract_features.py --mri-dir ixi-t1 --output rule_based_features.json
+```
+*   **Output**: `rule_based_features.json`
+
+#### Step 5: Train Feature Regressor
+Train the regression network to predict the 29 clinical features directly from raw MRI slices:
+```powershell
+.\.venv\Scripts\python train_regressor.py --mri-dir ixi-t1 --features-file rule_based_features.json --num-features 29 --epochs 100 --batch-size 32
+```
+*   **Output**: `checkpoints/regressor_best.pth`
+
+#### Step 6: Extract Final Predictions & Generate Reports
+Use the trained regressor to extract features for all MRI scans and automatically compile clinical reports:
+```powershell
+# Set your API Key (Powershell)
+$env:GEMINI_API_KEY="REDACTED_API_KEY"
+
+.\.venv\Scripts\python train_regressor.py --mri-dir ixi-t1 --checkpoint checkpoints/regressor_best.pth --predict
+```
+*   **Outputs**:
+    *   `features/predicted_features.json` (Numerical predictions)
+    *   `reports/` (Individual plain-English diagnostic reports)
 
 ---
 
-## Installation
+## 🖥️ NeuroSphere Web Dashboard
 
-### Prerequisites
-```bash
-# Python 3.8+
-pip install torch torchvision torchaudio
-pip install nibabel numpy scipy
-pip install antspyx  # For pseudo-label generation (ANTsPy)
-```
+The application includes an interactive, multi-threaded dashboard for clinical visualization and pipeline monitoring.
 
-### Verify Installation
-```bash
-python -c "import torch; print(torch.__version__); print(torch.cuda.is_available())"
+### Launch the Server
+```powershell
+.\.venv\Scripts\python app_server.py
 ```
+This will automatically launch the dashboard in your default browser at **`http://localhost:8000`**.
+
+### Dashboard Capabilities:
+*   **Interactive 3D Slice Viewer**: Click through axial, coronal, and sagittal planes of any patient's T1 MRI.
+*   **Overlay segmentations**: Toggle U-Net tissue segmentations (CSF, GM, WM) directly on top of the raw scan.
+*   **Dynamic Feature Extraction**: Drag and drop any new `.nii` file to segment it, calculate its 29 structural features, and view them immediately.
+*   **Clinical Summary**: Read the Gemini-generated medical report side-by-side with the brain model.
 
 ---
 
-## Quick Start
+## 📊 Feature Schema (29 Features)
 
-### Option A: Run Complete Pipeline
-```bash
-python pipeline.py
-```
+The quantitative extraction script (`extract_features.py`) calculates 29 features grouped into five categories:
 
-### Option B: Train Individual Models
-```bash
-# 1. Train autoencoder first
-python train_autoencoder.py --epochs 50 --batch-size 8
-
-# 2. (Optional) Train U-Net
-python pipeline.py --step 3  # Requires ANTsPy masks
-
-# 3. Train regressor (requires rule_based_features.json)
-python train_regressor.py --epochs 100 --batch-size 32
-```
+1.  **Intensity Statistics (10)**: Mean, standard deviation, minimum, maximum, median, 25th percentile, 75th percentile, skewness, kurtosis, and dynamic range.
+2.  **Tissue Volumes (4)**: CSF %, Gray Matter %, White Matter %, and Total Brain Tissue %.
+3.  **Texture Metrics (8)**: GLCM contrast, GLCM correlation, GLCM energy, GLCM homogeneity, mean gradient, standard deviation of gradient, maximum gradient, and Shannon entropy.
+4.  **Structural Features (5)**: Brain area %, eccentricity, solidity, extent, and perimeter.
+5.  **Symmetry Metrics (2)**: Bilateral symmetry score and asymmetry index %.
 
 ---
 
-## Detailed Usage
+## 📁 Workspace File Outputs
 
-### Step 0: Prepare Data
+Once the entire pipeline runs successfully, the folder structure will look like this:
 
-Download the IXI T1 dataset using the Kaggle CLI:
-
-```bash
-# Install Kaggle CLI
-pip install kaggle
-
-# Download the dataset zip file
-kaggle datasets download -d kbacon/ixi-t1
-
-# Unzip the downloaded file into the ixi-t1 directory
-unzip ixi-t1.zip -d ixi-t1/
 ```
-
-Your workspace should have:
-├── ixi-t1/
-│   ├── IXI002-Guys-0828-T1.nii/
-│   │   └── IXI002-Guys-0828-T1.nii
-│   ├── IXI012-HH-1211-T1.nii/
-│   │   └── IXI012-HH-1211-T1.nii
-│   ├── ... (more IXI files)
-```
-
-### Step 1: Autoencoder Training (Self-Supervised)
-
-**Start here** — no preprocessing needed!
-
-```bash
-python train_autoencoder.py \
-  --data-dir ixi-t1 \
-  --model-type 2d \           # or 3d
-  --epochs 50 \
-  --batch-size 8 \
-  --latent-dim 128 \
-  --save-dir checkpoints
-```
-
-**Output:**
-- `checkpoints/autoencoder_2d_best.pth` — Trained model
-- `checkpoints/autoencoder_2d_history.json` — Training history
-- `autoencoder_2d_features.json` — Extracted latent features
-
-**Parameters:**
-- `--model-type 2d`: Slice-based (faster, ≈256×256)
-- `--model-type 3d`: Volume-based (slower, ≈128×128×128)
-- `--latent-dim`: Feature vector size (64-256)
-- `--batch-size`: GPU memory dependent (8-32)
-
----
-
-### Step 2: (Optional) Generate ANTsPy Pseudo-Labels
-
-Required only for U-Net training.
-
-```bash
-# Install ANTsPy
-pip install antspyx
-
-# Generate masks
-python pipeline.py --step 1
-
-# Or manually:
-python train_unet.py --generate-masks --mri-dir ixi-t1 --mask-dir ixi-t1-masks
-```
-
-**Output:**
-- `ixi-t1-masks/` folder with `*_seg.nii` files
-- Segmentation masks: 0=background, 1=GM, 2=WM, 3=CSF
-
----
-
-### Step 3: U-Net Segmentation Training
-
-Requires ANTsPy masks (Step 2).
-
-```bash
-python train_unet.py \
-  --mri-dir ixi-t1 \
-  --mask-dir ixi-t1-masks \
-  --epochs 50 \
-  --batch-size 16 \
-  --save-dir checkpoints
-```
-
-**Output:**
-- `checkpoints/unet_segmentation_best.pth`
-- `checkpoints/unet_history.json`
-
----
-
-### Step 4: Create Rule-Based Ground Truth
-
-Your rule-based pipeline should generate:
-
-**Format:** `rule_based_features.json`
-```json
-{
-  "IXI002-Guys-0828-T1": [0.45, 0.32, 0.23, 0.15, ...],
-  "IXI012-HH-1211-T1": [0.47, 0.31, 0.22, 0.18, ...],
-  ...
-}
-```
-
-**Generate via your pipeline:**
-```python
-# Pseudo-code for your rule-based pipeline
-features_dict = {}
-for mri_file in get_all_mri_files():
-    # Extract features (GM/WM/CSF volumes, cortical thickness, etc.)
-    features = compute_features(mri_file)
-    features_dict[mri_file.stem] = features.tolist()
-
-# Save
-import json
-with open("rule_based_features.json", "w") as f:
-    json.dump(features_dict, f, indent=2)
+c:\Desktop\CCBD\MRI\
+├── checkpoints/                 # Model checkpoints (val_loss optimized)
+│   ├── autoencoder_2d_best.pth
+│   ├── autoencoder_2d_history.json
+│   ├── unet_best.pth            # Trained U-Net segmentation weights
+│   ├── unet_history.json
+│   ├── regressor_best.pth       # Trained feature regressor weights
+│   └── regressor_history.json
+├── features/
+│   └── predicted_features.json  # Final output feature JSON
+├── ixi-t1/                      # Raw dataset folders (.nii)
+├── ixi-t1-masks/                # ANTsPy pseudo-labels (.nii with correct header)
+├── reports/                     # Clinical reports generated by Gemini (.txt)
+├── rule_based_features.json     # Ground truth extracted target features
+├── train_autoencoder.py         # Step 2 script
+├── train_unet.py                # Steps 1 & 3 script
+├── extract_features.py          # Step 4 script
+├── train_regressor.py           # Steps 5 & 6 script
+├── pipeline.py                  # Step orchestrator
+└── app_server.py                # Web dashboard server
 ```
 
 ---
 
-### Step 5: Feature Regressor Training
+## ⚠️ Troubleshooting & Tips
 
-Requires `rule_based_features.json`.
-
-```bash
-python train_regressor.py \
-  --mri-dir ixi-t1 \
-  --features-file rule_based_features.json \
-  --num-features 64 \
-  --epochs 100 \
-  --batch-size 32 \
-  --save-dir checkpoints
-```
-
-**Output:**
-- `checkpoints/regressor_best.pth`
-- `checkpoints/regressor_history.json`
-
-**Features:**
-- 80/20 train/val split
-- Early stopping (patience=10)
-- Feature normalization
-- MSE loss with L2 regularization
-
----
-
-### Step 6: Extract Final Features
-
-```bash
-python train_regressor.py \
-  --mri-dir ixi-t1 \
-  --checkpoint checkpoints/regressor_best.pth \
-  --predict \
-  --save-dir features
-```
-
-**Output:**
-- `features/predicted_features.json` — Predictions for all MRI files
-- Same structure as rule-based GT
-
----
-
-## Full Pipeline Execution
-
-```bash
-# Run everything in order (with error checking)
-python pipeline.py \
-  --mri-dir ixi-t1 \
-  --features-file rule_based_features.json \
-  --ae-epochs 50 \
-  --unet-epochs 50 \
-  --regressor-epochs 100 \
-  --output-dir features
-```
-
-**Options:**
-- `--step 2` — Run only step 2 (autoencoder)
-- `--skip-unet` — Skip U-Net, only train AE + regressor
-- `--skip-synthseg` — Skip ANTsPy pseudo-label generation step
-- `--autoencoder-type 3d` — Use 3D model
-
----
-
-## Model Architectures
-
-### Autoencoder (2D)
-```
-Encoder:  256×256 → Conv(32) → Conv(64) → Conv(128) → Conv(256) → Latent(128)
-Decoder:  Latent(128) → ConvT(256) → ConvT(128) → ConvT(64) → ConvT(32) → 256×256
-Loss:     MSE (reconstruction)
-```
-
-### Autoencoder (3D)
-```
-Encoder:  128×128×128 → Conv3d layers → Latent(256)
-Decoder:  Latent(256) → ConvT3d layers → 128×128×128
-Loss:     MSE
-```
-
-### U-Net (2D)
-```
-Input:    256×256 MRI slice
-Encoder:  Conv → Pool → Conv → Pool → Conv → Pool (skip connections)
-Bottleneck: Conv(512)
-Decoder:  ConvT + Concatenate skip connections → Output 3-class segmentation
-Loss:     CrossEntropy with class weights [0.1, 0.5, 0.4] (background, GM, WM, CSF)
-```
-
-### Feature Regressor (CNN)
-```
-Input:    256×256 MRI slice
-Backbone: Conv(32) → Conv(64) → Conv(128) → Conv(256) → AdaptiveAvgPool
-Head:     Linear(256→128) → ReLU → Dropout → Linear(128→num_features)
-Loss:     MSE with L2 regularization
-```
-
----
-
-## Output Files
-
-After running the complete pipeline:
-
-```
-checkpoints/
-├── autoencoder_2d_best.pth          # Trained autoencoder
-├── autoencoder_2d_history.json      # Training metrics
-├── unet_segmentation_best.pth       # Trained U-Net
-├── unet_history.json
-├── regressor_best.pth               # Trained regressor
-└── regressor_history.json
-
-features/
-└── predicted_features.json          # ← FINAL OUTPUT
-
-autoencoder_2d_features.json        # Latent features from AE
-rule_based_features.json            # Your ground truth
-```
-
----
-
-## Hyperparameters Reference
-
-| Model | Epochs | Batch Size | Learning Rate | Device |
-|-------|--------|-----------|---------------|--------|
-| Autoencoder | 50-100 | 8-16 | 1e-3 | GPU |
-| U-Net | 50-100 | 16-32 | 1e-3 | GPU |
-| Regressor | 100-200 | 32-64 | 1e-3 | GPU |
-
-**Tips:**
-- Start with defaults, adjust if overfitting
-- Increase batch size if GPU memory allows
-- Reduce learning rate for finer tuning
-- More epochs for better convergence (with early stopping)
-
----
-
-## Troubleshooting
-
-### No CUDA/GPU detected
-```bash
-python -c "import torch; print(torch.cuda.is_available())"
-# If False: Install CUDA-compatible PyTorch
-```
-
-### Out of memory
-```bash
-# Reduce batch size
-python train_autoencoder.py --batch-size 4
-
-# Or use 3D model instead (processes fewer slices)
-python train_autoencoder.py --model-type 3d --batch-size 4
-```
-
-### No MRI files found
-```bash
-# Check directory structure
-ls ixi-t1/IXI002-Guys-0828-T1.nii/
-# Should contain: IXI002-Guys-0828-T1.nii
-```
-
-### ANTsPy masks missing
-
-```bash
-# Generate them:
-python train_unet.py --generate-masks --mri-dir ixi-t1 --mask-dir ixi-t1-masks
-# Then retry U-Net training
-```
-
-### Features file not found
-```bash
-# Generate rule-based features first
-python compute_rule_based_features.py  # Your script
-# Creates: rule_based_features.json
-```
-
----
-
-## Performance Estimates
-
-| Model | GPU | Time | Memory |
-|-------|-----|------|--------|
-| Autoencoder (2D, 50 ep) | RTX 3080 | 30-60 min | 4 GB |
-| U-Net (50 ep) | RTX 3080 | 20-40 min | 6 GB |
-| Regressor (100 ep) | RTX 3080 | 40-80 min | 4 GB |
-| **Total** | - | **2-3 hours** | - |
-
----
-
-## Next Steps
-
-1. ✓ Train autoencoder (self-supervised)
-2. ✓ Generate rule-based features
-3. ✓ Train feature regressor
-4. ✓ Extract final features → JSON
-5. Use features for:
-   - Downstream analysis
-   - Classification/regression tasks
-   - Clustering
-   - Visualization/dimensionality reduction
-
----
-
-## Files Overview
-
-| File | Purpose |
-|------|---------|
-| `train_autoencoder.py` | Self-supervised feature learning |
-| `train_unet.py` | Segmentation with pseudo-labels |
-| `train_regressor.py` | Feature prediction from MRI |
-| `pipeline.py` | Master orchestration script |
-| `LLM-pipeline.py` | (Your existing pipeline) |
-| `first-pipeline.py` | (Your existing pipeline) |
-
----
-
-## Citation & References
-
-- **Nibabel:** NIfTI file handling
-- **PyTorch:** Deep learning framework
-- **ANTsPy:** Atropos tissue segmentation & bias correction (Avants et al.)
-
----
-
-## Questions?
-
-Check the generated `.json` files and `.pth` checkpoints for:
-- Training curves in `*_history.json`
-- Model weights in `*_best.pth`
-- Feature predictions in `predicted_features.json`
-
-Happy training! 🚀
+*   **CUDA Out of Memory**: If training crashes with a GPU memory error, decrease the `--batch-size` parameter (e.g., use `--batch-size 8` for U-Net or `--batch-size 4` for Autoencoder).
+*   **Incorrect Voxel Spacing/Orientation in BrainViewer**: Make sure you generate masks using the updated `train_unet.py` script. The updated saving code copies the correct affines and sets `qform` / `sform` to `1` so they align properly in 3D viewers.
+*   **GEMINI_API_KEY environment variable missing**: Set your key in the environment before running predictions to automatically get report writeups.
