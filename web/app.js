@@ -43,6 +43,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Report
     const reportPaper = document.getElementById("report-text-content");
+    const reportToolbar = document.getElementById("report-toolbar");
+    const reportDocument = document.getElementById("clinical-document-paper");
+    const reportCta = document.getElementById("report-generate-cta");
+    const reportGeneratingState = document.getElementById("report-generating-state");
+    const generateReportBtn = document.getElementById("btn-generate-report");
     const printReportBtn = document.getElementById("btn-print-report");
     const downloadReportBtn = document.getElementById("btn-download-report");
 
@@ -173,6 +178,35 @@ document.addEventListener("DOMContentLoaded", () => {
             appendConsoleLog("Console cleared.", "system-msg");
         });
 
+        // Generate Report button
+        generateReportBtn.addEventListener("click", () => {
+            if (!activePatientId) {
+                appendConsoleLog("Select a scan first before generating a report.", "error-msg");
+                return;
+            }
+            // Show spinner, hide the button
+            generateReportBtn.style.display = "none";
+            reportGeneratingState.style.display = "flex";
+            appendConsoleLog(`Generating clinical report for ${activePatientId}...`, "cmd-msg");
+
+            fetch(`/api/report/${activePatientId}`)
+                .then(res => res.json())
+                .then(data => {
+                    // Hide CTA, show document + toolbar
+                    reportCta.style.display = "none";
+                    reportDocument.style.display = "block";
+                    reportToolbar.style.display = "flex";
+                    reportPaper.innerHTML = `<pre>${data.report || "No report content returned."}</pre>`;
+                    appendConsoleLog("Clinical report generated.", "cmd-msg");
+                })
+                .catch(err => {
+                    // Restore button on error
+                    generateReportBtn.style.display = "inline-flex";
+                    reportGeneratingState.style.display = "none";
+                    appendConsoleLog("Error generating report. Is the server running?", "error-msg");
+                });
+        });
+
         // Print Report
         printReportBtn.addEventListener("click", () => {
             const printWindow = window.open('', '_blank');
@@ -287,6 +321,16 @@ document.addEventListener("DOMContentLoaded", () => {
             });
     }
 
+    // ── Report Tab: reset to CTA state when switching patient ────────
+    function resetReportTab() {
+        reportCta.style.display = "flex";
+        generateReportBtn.style.display = "inline-flex";
+        reportGeneratingState.style.display = "none";
+        reportDocument.style.display = "none";
+        reportToolbar.style.display = "none";
+        reportPaper.innerHTML = "";
+    }
+
     // Select and load patient data
     function selectPatient(patientId) {
         if (!patientId) return;
@@ -298,6 +342,9 @@ document.addEventListener("DOMContentLoaded", () => {
         analysisViewport.style.display = "flex";
         metadataSummary.innerHTML = `<span class="meta-tag">Loading details...</span>`;
         document.getElementById("btn-download-json").style.display = "none";
+
+        // Reset report tab — user must click Generate Report
+        resetReportTab();
         
         fetch(`/api/features/${patientId}`)
             .then(res => res.json())
@@ -309,15 +356,6 @@ document.addEventListener("DOMContentLoaded", () => {
             })
             .catch(err => {
                 appendConsoleLog(`Error fetching features for patient ${patientId}`, "error-msg");
-            });
-
-        fetch(`/api/report/${patientId}`)
-            .then(res => res.json())
-            .then(data => {
-                reportPaper.innerHTML = `<pre>${data.report || "No report generated yet."}</pre>`;
-            })
-            .catch(err => {
-                reportPaper.innerHTML = `<p class="error-msg">Error loading report.</p>`;
             });
     }
 

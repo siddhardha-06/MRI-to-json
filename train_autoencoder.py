@@ -7,7 +7,7 @@ import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, Sampler
 import nibabel as nib
 import numpy as np
 from pathlib import Path
@@ -107,6 +107,37 @@ class MRIDataset(Dataset):
             ).squeeze(0)  # (1, img_size, img_size, img_size)
             
             return volume_t
+
+class VolumeGroupedSampler(Sampler):
+    """
+    Samples slices grouped by volume so that consecutive items in the
+    DataLoader come from the same 3D MRI. This gives ~100% LRU cache
+    hit rate instead of ~2% with pure random shuffle.
+    """
+    def __init__(self, samples: list, shuffle: bool = True):
+        from collections import defaultdict
+        # Group slice list-indices by MRI file path (first element of tuple)
+        vol_to_indices = defaultdict(list)
+        for i, (mri_path, _slice_idx) in enumerate(samples):
+            vol_to_indices[mri_path].append(i)
+        self.groups = list(vol_to_indices.values())
+        self.shuffle = shuffle
+        self._len = sum(len(g) for g in self.groups)
+
+    def __iter__(self):
+        groups = [g.copy() for g in self.groups]
+        if self.shuffle:
+            random.shuffle(groups)               # shuffle volume order
+            for g in groups:
+                random.shuffle(g)                # shuffle slices within volume
+                yield from g
+        else:
+            for g in groups:
+                yield from g
+
+    def __len__(self) -> int:
+        return self._len
+
 
 # =============================================================================
 # 3. Autoencoder Architecture
@@ -300,8 +331,9 @@ def train_autoencoder(
     # Force num_workers = 0 so the lru_cache is loaded in-process and shared
     num_workers = 0
     pin_mem = torch.cuda.is_available()
+    train_sampler = VolumeGroupedSampler(train_dataset.samples, shuffle=True)
     train_loader = DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=True,
+        train_dataset, batch_size=batch_size, sampler=train_sampler,
         num_workers=num_workers, pin_memory=pin_mem
     )
     val_loader = DataLoader(

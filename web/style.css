@@ -1089,3 +1089,107 @@ body {
 .text-glow {
     text-shadow: 0 0 6px rgba(139, 92, 246, 0.4);
 }
+
+/* ── Generate Report CTA ─────────────────────────────────────────── */
+.clinical-report-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: 12px;
+}
+
+.clinical-report-toolbar {
+    display: flex;
+    gap: 10px;
+    padding: 8px 0 4px;
+    flex-shrink: 0;
+}
+
+.report-generate-cta {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    gap: 16px;
+    text-align: center;
+    padding: 40px 32px;
+    background: rgba(139, 92, 246, 0.04);
+    border: 1px dashed rgba(139, 92, 246, 0.2);
+    border-radius: 12px;
+    animation: fadeIn 0.3s ease;
+}
+
+.report-cta-icon {
+    font-size: 48px;
+    line-height: 1;
+    filter: drop-shadow(0 0 16px rgba(139, 92, 246, 0.4));
+}
+
+.report-cta-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.report-cta-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    max-width: 380px;
+    line-height: 1.6;
+}
+
+.btn-generate-report {
+    padding: 12px 32px;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+    box-shadow: 0 4px 20px rgba(139, 92, 246, 0.35);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-generate-report:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(139, 92, 246, 0.5);
+}
+
+.btn-generate-report:active {
+    transform: translateY(0);
+}
+
+/* Shimmer sweep on hover */
+.btn-generate-report::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.18) 50%, transparent 70%);
+    transform: translateX(-100%);
+    transition: transform 0.5s ease;
+}
+
+.btn-generate-report:hover::after {
+    transform: translateX(100%);
+}
+
+.btn-generate-icon {
+    margin-right: 8px;
+}
+
+.report-generating-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.report-generating-state .progress-spinner {
+    width: 28px;
+    height: 28px;
+    border-width: 3px;
+}

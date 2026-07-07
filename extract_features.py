@@ -296,12 +296,42 @@ def extract_edge_features(arr: np.ndarray) -> dict:
     }
 
 
-def extract_all_features(mri_path: str) -> list:
+def _n4_file_is_valid(path: Path) -> bool:
+    """Read NIfTI header (fast) and check if file size matches expected shape+dtype"""
+    try:
+        img = nib.load(str(path))
+        expected_data_bytes = int(np.prod(img.shape)) * np.dtype(img.get_data_dtype()).itemsize
+        actual_size = path.stat().st_size
+        offset = int(img.header.get('vox_offset', 352))
+        actual_data_bytes = actual_size - offset
+        img.uncache()
+        return actual_data_bytes >= expected_data_bytes * 0.99
+    except Exception:
+        return False
+
+
+def _resolve_mri_path(mri_path: str, mask_dir: str = "ixi-t1-masks") -> str:
+    """Returns the N4-corrected MRI path if it exists and is valid, otherwise raw path"""
+    if not mask_dir:
+        return mri_path
+    path_obj = Path(mri_path)
+    stem = path_obj.name.replace(".nii.gz", "").replace(".nii", "")
+    n4_candidate = Path(mask_dir) / "n4" / f"{stem}_n4.nii"
+    if n4_candidate.exists() and _n4_file_is_valid(n4_candidate):
+        return str(n4_candidate)
+    return mri_path
+
+
+def extract_all_features(mri_path: str, mask_dir: str = "ixi-t1-masks") -> list:
     """
     Extract and average all 40 features across 5 central slices of the MRI file
     Returns: [feat1, feat2, ..., feat40]
     """
-    img = nib.load(mri_path)
+    resolved_path = _resolve_mri_path(mri_path, mask_dir)
+    if resolved_path != mri_path:
+        print(f"  [INFO] Extracting features from resolved N4-corrected path: {Path(resolved_path).name}")
+        
+    img = nib.load(resolved_path)
     data = img.get_fdata().astype(np.float32)
     img.uncache()
     

@@ -64,12 +64,34 @@ def load_mri_slice(path: str) -> np.ndarray:
 
 def run_feature_extraction(mri_path: str):
     """Run full 40-feature extraction on NIfTI file and return structures"""
+    # Dynamic N4 bias correction for uploaded files to match training domain
+    # (prevents compression of White Matter signal caused by scanner bias field)
+    n4_path = mri_path.replace(".nii", "_n4.nii")
+    active_mri = mri_path
+    
+    if not os.path.exists(n4_path):
+        print(f"Applying dynamic N4 bias field correction to uploaded scan: {mri_path}")
+        try:
+            import ants
+            # Run N4 correction
+            img = ants.image_read(mri_path)
+            img_corrected = ants.n4_bias_field_correction(img)
+            ants.image_write(img_corrected, n4_path)
+            print(f"N4 corrected MRI saved to {n4_path}")
+            active_mri = n4_path
+        except Exception as e:
+            print(f"[WARNING] Dynamic N4 correction failed, using raw MRI: {e}")
+            active_mri = mri_path
+    else:
+        active_mri = n4_path
+
     # 1. Compute on-the-fly features using 5-slice average from extract_features
+    # Set mask_dir=None because this is an upload, we already N4-corrected it directly
     from extract_features import extract_all_features
-    flat_vector = extract_all_features(mri_path)
+    flat_vector = extract_all_features(active_mri, mask_dir=None)
     
     # 2. Load middle slice for bbox and centroid overlay drawing
-    arr = load_mri_slice(mri_path)
+    arr = load_mri_slice(active_mri)
     
     brain_mask = arr > 0.05
     labeled = measure.label(brain_mask)

@@ -8,18 +8,19 @@ import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, Sampler
 import nibabel as nib
 import numpy as np
 from pathlib import Path
 import json
+import random
 from functools import lru_cache
 
 # =============================================================================
 # 0. Global Cache & Helper Functions
 # =============================================================================
 
-@lru_cache(maxsize=32)
+@lru_cache(maxsize=200)
 def load_and_preprocess_mri(mri_path):
     """Load MRI NIfTI, apply percentile-clipped normalization, and uncache (shared memory cache)."""
     img = nib.load(mri_path)
@@ -187,6 +188,37 @@ class MRIFeatureDataset(Dataset):
         return mri_slice, features_gt
 
 
+class VolumeGroupedSampler(Sampler):
+    """
+    Samples slices grouped by volume so that consecutive items in the
+    DataLoader come from the same 3D MRI. This gives ~100% LRU cache
+    hit rate instead of ~2% with pure random shuffle.
+    """
+    def __init__(self, samples: list, shuffle: bool = True):
+        from collections import defaultdict
+        # Group slice list-indices by MRI file path (first element of tuple)
+        vol_to_indices = defaultdict(list)
+        for i, (mri_path, _stem, _slice_idx) in enumerate(samples):
+            vol_to_indices[mri_path].append(i)
+        self.groups = list(vol_to_indices.values())
+        self.shuffle = shuffle
+        self._len = sum(len(g) for g in self.groups)
+
+    def __iter__(self):
+        groups = [g.copy() for g in self.groups]
+        if self.shuffle:
+            random.shuffle(groups)               # shuffle volume order
+            for g in groups:
+                random.shuffle(g)                # shuffle slices within volume
+                yield from g
+        else:
+            for g in groups:
+                yield from g
+
+    def __len__(self) -> int:
+        return self._len
+
+
 # =============================================================================
 # 3. Training Loop
 # =============================================================================
@@ -224,11 +256,19 @@ def train_regressor(
     
     with open(features_file, 'r') as f:
         features_gt = json.load(f)
-        
-    valid_files = [f for f in mri_files if f.stem in features_gt]
-    
+
+    valid_files = []
+    for f in mri_files:
+        if f.stem in features_gt:
+            # Domain alignment: only train regressor on scans that have precomputed N4-corrected
+            # volumes (ensures training targets are N4-standardized features with accurate WM%).
+            stem_name = f.name.replace(".nii.gz", "").replace(".nii", "")
+            n4_path = Path("ixi-t1-masks") / "n4" / f"{stem_name}_n4.nii"
+            if n4_path.exists():
+                valid_files.append(f)
+                
     if len(valid_files) == 0:
-        print("ERROR: No matching MRI-feature pairs found!")
+        print("ERROR: No matching MRI-feature pairs found with N4-corrected volumes!")
         return None, None
     
     # Subject-level split (deterministic to prevent data leakage)
@@ -267,8 +307,9 @@ def train_regressor(
     num_workers = 0 if os.name == 'nt' else 2
     pin_mem = torch.cuda.is_available()
     
+    train_sampler = VolumeGroupedSampler(train_dataset.samples, shuffle=True)
     train_loader = DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=True,
+        train_dataset, batch_size=batch_size, sampler=train_sampler,
         num_workers=num_workers, pin_memory=pin_mem
     )
     val_loader = DataLoader(

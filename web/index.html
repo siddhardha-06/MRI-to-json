@@ -346,13 +346,30 @@
                             <!-- Tab 3: Gemini Clinical Report -->
                             <div class="tab-pane" id="tab-report">
                                 <div class="clinical-report-container">
-                                    <div class="clinical-report-toolbar">
+
+                                    <!-- Toolbar: hidden until report is generated -->
+                                    <div class="clinical-report-toolbar" id="report-toolbar" style="display: none;">
                                         <button class="btn btn-outline" id="btn-print-report">🖨️ Print Report</button>
                                         <button class="btn btn-outline" id="btn-download-report">📥 Download Report</button>
                                     </div>
-                                    
-                                    <!-- Print Layout Clinical Document -->
-                                    <div class="clinical-document" id="clinical-document-paper">
+
+                                    <!-- Generate Report CTA (shown before report is generated) -->
+                                    <div class="report-generate-cta" id="report-generate-cta">
+                                        <div class="report-cta-icon">📋</div>
+                                        <h3 class="report-cta-title">Clinical Report</h3>
+                                        <p class="report-cta-desc">Analyse the extracted MRI features and generate a structured clinical summary report for this scan.</p>
+                                        <button class="btn btn-primary btn-generate-report" id="btn-generate-report">
+                                            <span class="btn-generate-icon">✨</span>
+                                            Generate Report
+                                        </button>
+                                        <div class="report-generating-state" id="report-generating-state" style="display: none;">
+                                            <div class="progress-spinner"></div>
+                                            <p>Generating clinical report...</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Print Layout Clinical Document (hidden until generated) -->
+                                    <div class="clinical-document" id="clinical-document-paper" style="display: none;">
                                         <div id="report-text-content">
                                             <!-- Loaded dynamically -->
                                         </div>
