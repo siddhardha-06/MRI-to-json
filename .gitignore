@@ -11,6 +11,7 @@ ixi-t1-masks/
 *.tar.gz
 
 # Model checkpoints and outputs
+checkpoints/
 features/
 reports/
 uploads/
