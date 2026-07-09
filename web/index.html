@@ -9,6 +9,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <!-- NiiVue 3D WebGL Medical Image Viewer -->
+    <script src="https://unpkg.com/@niivue/niivue@0.38.0/dist/niivue.umd.js"></script>
 </head>
 <body>
     <div class="app-container">
@@ -212,33 +214,16 @@
                     
                     <!-- Top Section: Metadata & Visualizer -->
                     <div class="viewport-header-row">
-                        <!-- Canvas Visualizer Card -->
-                        <div class="glass-card visualizer-card">
-                            <div class="card-header-row">
-                                <h3 class="card-title-sm">2D Brain Slice Segmentation</h3>
-                                <div class="visualizer-options">
-                                    <label class="toggle-container">
-                                        <input type="checkbox" id="toggle-bounding-box" checked>
-                                        <span class="toggle-slider"></span>
-                                        Bounding Box
-                                    </label>
-                                    <label class="toggle-container">
-                                        <input type="checkbox" id="toggle-centroid" checked>
-                                        <span class="toggle-slider"></span>
-                                        Centroid
-                                    </label>
-                                </div>
-                            </div>
-                            
-                            <div class="canvas-container">
-                                <canvas id="brain-canvas" width="300" height="300"></canvas>
-                                
-                                <div class="canvas-legend">
-                                    <div class="legend-item"><span class="legend-dot" style="background:#5e5ef0;"></span> CSF</div>
-                                    <div class="legend-item"><span class="legend-dot" style="background:#808080;"></span> Gray Matter</div>
-                                    <div class="legend-item"><span class="legend-dot" style="background:#e6e6e6;"></span> White Matter</div>
-                                </div>
-                            </div>
+                        <!-- Fullscreen 3D Visualizer Launch Card -->
+                        <div class="glass-card visualizer-card" style="flex: 2; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 380px; text-align: center; padding: 30px; background: linear-gradient(135deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.6) 100%); border: 1px solid rgba(255, 255, 255, 0.08);">
+                            <div style="font-size: 64px; margin-bottom: 20px;">🧠</div>
+                            <h3 style="font-family: 'Outfit', sans-serif; font-size: 22px; font-weight: 600; color: #f8fafc; margin-bottom: 10px;">Interactive 3D NiiVue Viewer</h3>
+                            <p style="font-size: 13px; color: #94a3b8; max-width: 385px; margin-bottom: 25px; line-height: 1.6;">
+                                Explore the complete 3D MRI volume scan, slice planes (Axial, Coronal, Sagittal), crosshair alignments, and tissue segmentations in full-screen high-performance WebGL.
+                            </p>
+                            <button class="btn btn-primary" id="btn-launch-viewer" style="padding: 12px 28px; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; font-weight: 600; border-radius: 8px; box-shadow: var(--shadow-neon); cursor: pointer; transition: all 0.3s ease;">
+                                🚀 Launch Fullscreen 3D Visualizer
+                            </button>
                         </div>
 
                         <!-- Scan Metadata Card -->
@@ -310,6 +295,14 @@
                                     <div class="metric-group-card">
                                         <h4>GLCM Texture Features</h4>
                                         <table class="metric-table" id="table-texture">
+                                            <!-- Dynamically populated -->
+                                        </table>
+                                    </div>
+
+                                    <!-- Volumetric Stats -->
+                                    <div class="metric-group-card">
+                                        <h4>Estimated 3D Volumes (ANTsPy)</h4>
+                                        <table class="metric-table" id="table-volumes">
                                             <!-- Dynamically populated -->
                                         </table>
                                     </div>

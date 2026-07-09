@@ -15,11 +15,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const metadataSummary = document.getElementById("scan-metadata-summary");
     const metadataGrid = document.getElementById("metadata-grid");
     
-    // Canvas
-    const canvas = document.getElementById("brain-canvas");
-    const ctx = canvas.getContext("2d");
-    const toggleBB = document.getElementById("toggle-bounding-box");
-    const toggleCentroid = document.getElementById("toggle-centroid");
+    // Standalone 3D Visualizer Launch Button
+    const btnLaunchViewer = document.getElementById("btn-launch-viewer");
 
     // Progress bars
     const barCsf = document.getElementById("bar-csf-pct");
@@ -102,7 +99,6 @@ document.addEventListener("DOMContentLoaded", () => {
     function init() {
         fetchSystemStatus();
         setupEventListeners();
-        drawPlaceholderBrain();
         loadLatestUpload();
     }
 
@@ -130,9 +126,16 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         });
 
-        // Canvas redraw on options toggle
-        toggleBB.addEventListener("change", () => drawBrainSlice());
-        toggleCentroid.addEventListener("change", () => drawBrainSlice());
+        // Launch fullscreen 3D NiiVue viewer in new tab
+        if (btnLaunchViewer) {
+            btnLaunchViewer.addEventListener("click", () => {
+                if (activePatientId) {
+                    window.open(`viewer.html?patient_id=${encodeURIComponent(activePatientId)}`, "_blank");
+                } else {
+                    appendConsoleLog("Please select a patient first.", "warning-msg");
+                }
+            });
+        }
 
         // File upload drag & drop
         dropZone.addEventListener("dragover", (e) => {
@@ -351,7 +354,7 @@ document.addEventListener("DOMContentLoaded", () => {
             .then(data => {
                 patientData = data;
                 renderPatientDetails();
-                drawBrainSlice();
+                appendConsoleLog("Interactive 3D NIfTI scan loaded. Click 'Launch Fullscreen 3D Visualizer' to explore in WebGL.");
                 document.getElementById("btn-download-json").style.display = "inline-flex";
             })
             .catch(err => {
@@ -438,6 +441,27 @@ document.addEventListener("DOMContentLoaded", () => {
             <tr><td>Shannon Entropy</td><td>${texture.shannon_entropy.toFixed(4)}</td></tr>
         `;
 
+        // Populate Volumetric Statistics Card
+        const tblVolumes = document.getElementById("table-volumes");
+        if (tblVolumes) {
+            if (patientData.volumetric_statistics) {
+                const vols = patientData.volumetric_statistics;
+                tblVolumes.innerHTML = `
+                    <tr><td>Total Brain Vol (GM+WM)</td><td>${vols.total_brain_volume_ml.toFixed(1)} mL</td></tr>
+                    <tr><td>Gray Matter Volume</td><td>${vols.gray_matter_volume_ml.toFixed(1)} mL</td></tr>
+                    <tr><td>White Matter Volume</td><td>${vols.white_matter_volume_ml.toFixed(1)} mL</td></tr>
+                    <tr><td>CSF Volume</td><td>${vols.csf_volume_ml.toFixed(1)} mL</td></tr>
+                    <tr><td>Left Hippocampus</td><td>${vols.left_hippocampus_volume_ml.toFixed(3)} mL</td></tr>
+                    <tr><td>Right Hippocampus</td><td>${vols.right_hippocampus_volume_ml.toFixed(3)} mL</td></tr>
+                    <tr><td>Total Hippocampus</td><td>${vols.total_hippocampus_volume_ml.toFixed(3)} mL</td></tr>
+                `;
+            } else {
+                tblVolumes.innerHTML = `
+                    <tr><td colspan="2" style="color: #64748b; text-align: center; font-style: italic; padding: 20px 0; font-size: 11px;">3D volumes only computed on-the-fly for uploaded T1 scans.</td></tr>
+                `;
+            }
+        }
+
         // Populate Vector Comparison (29 features)
         const ruleBasedArray = patientData.rule_based_array || [];
         const predictedArray = patientData.predicted_array || [];
@@ -498,214 +522,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Brain Slice Procedural Visualizer
-    function drawBrainSlice() {
-        if (!patientData) return;
-
-        // Clear
-        ctx.fillStyle = "#040509";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        const width = canvas.width;
-        const height = canvas.height;
-        const cx = width / 2;
-        const cy = height / 2;
-
-        // Extract metrics for procedural scaling
-        const solidity = patientData.structural_features.solidity;     // compactness
-        const eccentricity = patientData.structural_features.eccentricity; // elongation
-        const csf = patientData.tissue_segmentation.csf_ventricles.percentage;
-        const gm = patientData.tissue_segmentation.gray_matter.percentage;
-        const wm = patientData.tissue_segmentation.white_matter.percentage;
-        const asymmetry = patientData.symmetry.asymmetry_index_pct;
-        const bbox = patientData.structural_features.bounding_box;
-        const centroid = patientData.structural_features.centroid;
-
-        // Radial bounds
-        const baseRadius = 80;
-        // Eccentricity makes it oval (normal is axial slice slightly oval)
-        // eccentricity goes from 0 (circle) to 1 (line).
-        // Standard brain eccentricity in axial is ~0.5 - 0.7.
-        const rx = baseRadius * (1 - eccentricity * 0.15);
-        const ry = baseRadius * (1 + eccentricity * 0.15);
-
-        // Compute noise seed based on solidity to simulate wrinkled brain cortex
-        // Solidity is close to 1. The lower the solidity, the more lobulated/wrinkled
-        const wrinkles = Math.max(0, (1 - solidity) * 20);
-
-        // 1. Draw outer Brain / Gray Matter band
-        ctx.save();
-        ctx.translate(cx, cy);
-        
-        // Draw Lobes/Cortex outer shape
-        ctx.beginPath();
-        for (let angle = 0; angle < Math.PI * 2; angle += 0.05) {
-            // Add custom sine wrinkles to simulate sulci
-            const wrinkleFreq = 16;
-            const wrinkleAmp = wrinkles * 8;
-            const rOffset = Math.sin(angle * wrinkleFreq) * wrinkleAmp * Math.random(); 
-            // Also divide left and right slightly using asymmetry
-            let shapeAsym = 1.0;
-            if (angle > Math.PI / 2 && angle < 3 * Math.PI / 2) {
-                // Left hemisphere
-                shapeAsym += (asymmetry / 200);
-            } else {
-                // Right hemisphere
-                shapeAsym -= (asymmetry / 200);
-            }
-
-            const x = Math.cos(angle) * (rx * shapeAsym + rOffset);
-            const y = Math.sin(angle) * (ry + rOffset);
-            if (angle === 0) {
-                ctx.moveTo(x, y);
-            } else {
-                ctx.lineTo(x, y);
-            }
-        }
-        ctx.closePath();
-        
-        // Gray matter gradient fill
-        const gmGrad = ctx.createRadialGradient(0, 0, 10, 0, 0, ry);
-        gmGrad.addColorStop(0, "#252736");
-        gmGrad.addColorStop(0.7, "#585b73");
-        gmGrad.addColorStop(1, "#808080");
-        
-        ctx.fillStyle = gmGrad;
-        ctx.fill();
-        ctx.strokeStyle = "#9aa0c2";
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-        ctx.restore();
-
-        // 2. Draw Inner White Matter Core
-        ctx.save();
-        ctx.translate(cx, cy);
-        
-        // White matter tracks shape (smaller, less lobulated)
-        const wmRx = rx * 0.75;
-        const wmRy = ry * 0.78;
-        ctx.beginPath();
-        for (let angle = 0; angle < Math.PI * 2; angle += 0.05) {
-            // Core has bigger lobes
-            const wrinkleFreq = 6;
-            const wrinkleAmp = 4 + wrinkles * 2;
-            const rOffset = Math.sin(angle * wrinkleFreq) * wrinkleAmp;
-            const x = Math.cos(angle) * (wmRx + rOffset);
-            const y = Math.sin(angle) * (wmRy + rOffset);
-            if (angle === 0) {
-                ctx.moveTo(x, y);
-            } else {
-                ctx.lineTo(x, y);
-            }
-        }
-        ctx.closePath();
-        
-        // Fill white matter
-        const wmGrad = ctx.createRadialGradient(0, 0, 5, 0, 0, wmRy);
-        wmGrad.addColorStop(0, "#bfbfcf");
-        wmGrad.addColorStop(1, "#e6e6e6");
-        ctx.fillStyle = wmGrad;
-        ctx.fill();
-        ctx.strokeStyle = "rgba(255,255,255,0.4)";
-        ctx.lineWidth = 0.8;
-        ctx.stroke();
-        ctx.restore();
-
-        // 3. Draw Lateral Ventricles (CSF - Center)
-        // Scaled by CSF percentage
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.fillStyle = "#3b3be6"; // CSF deep blue
-        ctx.strokeStyle = "#5e5ef0"; // Cyan border
-        ctx.lineWidth = 1.5;
-
-        const ventScale = Math.max(3, csf * 0.8);
-        
-        // Draw Left Ventricle (butterfly shape)
-        ctx.beginPath();
-        ctx.ellipse(-12, -5, ventScale * 0.8, ventScale * 1.5, Math.PI / 12, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-
-        // Draw Right Ventricle
-        ctx.beginPath();
-        ctx.ellipse(12, -5, ventScale * 0.8, ventScale * 1.5, -Math.PI / 12, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-
-        // Third ventricle (thin slit)
-        ctx.beginPath();
-        ctx.rect(-2, -20, 4, 30);
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.restore();
-
-        // 4. Overlay: Bounding Box
-        if (toggleBB.checked && bbox) {
-            ctx.save();
-            // Scale bbox back to canvas sizing
-            const scaleX = width / 256;
-            const scaleY = height / 256;
-            
-            const x = bbox.min_col * scaleX;
-            const y = bbox.min_row * scaleY;
-            const w = (bbox.max_col - bbox.min_col) * scaleX;
-            const h = (bbox.max_row - bbox.min_row) * scaleY;
-
-            ctx.strokeStyle = "rgba(236, 72, 153, 0.65)"; // Pink BB
-            ctx.lineWidth = 1;
-            ctx.setLineDash([4, 4]);
-            ctx.strokeRect(x, y, w, h);
-            
-            // Draw label
-            ctx.fillStyle = "rgba(236, 72, 153, 0.9)";
-            ctx.font = "9px JetBrains Mono";
-            ctx.fillText("BBOX", x + 4, y + 12);
-            ctx.restore();
-        }
-
-        // 5. Overlay: Centroid
-        if (toggleCentroid.checked && centroid) {
-            ctx.save();
-            const scaleX = width / 256;
-            const scaleY = height / 256;
-            const cenX = centroid.col * scaleX;
-            const cenY = centroid.row * scaleY;
-
-            // Draw crosshair
-            ctx.strokeStyle = "rgba(6, 182, 212, 0.8)"; // Cyan
-            ctx.lineWidth = 1;
-            
-            ctx.beginPath();
-            ctx.moveTo(cenX - 8, cenY);
-            ctx.lineTo(cenX + 8, cenY);
-            ctx.moveTo(cenX, cenY - 8);
-            ctx.lineTo(cenX, cenY + 8);
-            ctx.stroke();
-
-            // Draw center dot
-            ctx.beginPath();
-            ctx.arc(cenX, cenY, 2, 0, Math.PI * 2);
-            ctx.fillStyle = "var(--color-cyan)";
-            ctx.fill();
-
-            // Text
-            ctx.fillStyle = "rgba(6, 182, 212, 0.9)";
-            ctx.font = "9px JetBrains Mono";
-            ctx.fillText(`C (${centroid.col.toFixed(0)},${centroid.row.toFixed(0)})`, cenX + 8, cenY - 4);
-            ctx.restore();
-        }
-    }
-
-    function drawPlaceholderBrain() {
-        ctx.fillStyle = "#040509";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = varColor("--text-muted");
-        ctx.font = "12px var(--font-sans)";
-        ctx.textAlign = "center";
-        ctx.fillText("Brain Canvas", canvas.width / 2, canvas.height / 2);
-    }
+    // Standalone viewer launched in separate tab; local definitions removed.
 
     function varColor(varName) {
         return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();

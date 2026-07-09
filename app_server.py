@@ -107,6 +107,123 @@ def run_feature_extraction(mri_path: str):
         centroid_col = float(brain.centroid[1])
         bbox_min_row, bbox_min_col, bbox_max_row, bbox_max_col = [int(v) for v in brain.bbox]
         
+    # Calculate 3D volumes (CSF, GM, WM, Left/Right Hippocampus) using ANTsPy
+    volumetric_stats = None
+    try:
+        import ants
+        
+        template_path = os.path.join(CHECKPOINTS_DIR, "MNI152_T1_2mm_brain.nii.gz")
+        labels_path = os.path.join(CHECKPOINTS_DIR, "HarvardOxford-sub-maxprob-thr25-2mm.nii.gz")
+        
+        if os.path.exists(template_path) and os.path.exists(labels_path):
+            print("Calculating 3D volumetric statistics (Atropos + Hippocampus registration)...")
+            
+            # Helper to load safely on Windows (HDF5 bypass)
+            def load_mri_ants_local(filepath):
+                import nibabel as nib
+                nib_img = nib.load(filepath)
+                data = nib_img.get_fdata().astype(np.float32)
+                try:
+                    spacing = [float(z) for z in nib_img.header.get_zooms()[:3]]
+                    spacing = [s if s > 0 else 1.0 for s in spacing]
+                except Exception:
+                    spacing = [1.0, 1.0, 1.0]
+                return ants.from_numpy(data, spacing=spacing)
+
+            patient = load_mri_ants_local(active_mri)
+            template = load_mri_ants_local(template_path)
+            labels = load_mri_ants_local(labels_path)
+            
+            # Atropos tissue segmentation
+            arr_3d = patient.numpy()
+            p1 = float(np.percentile(arr_3d, 1))
+            p99 = float(np.percentile(arr_3d, 99))
+            arr_norm = np.clip(arr_3d, p1, p99)
+            arr_norm = (arr_norm - p1) / (p99 - p1 + 1e-5)
+            
+            brain_seeds = arr_norm > 0.18
+            from skimage.morphology import disk, closing as sk_closing, dilation as sk_dilation
+            brain_clean_mask = np.zeros_like(brain_seeds)
+            d = disk(2)
+            for s in range(brain_seeds.shape[2]):
+                sl = brain_seeds[:, :, s]
+                sl = sk_closing(sl, footprint=d)
+                sl = sk_dilation(sl, footprint=d)
+                brain_clean_mask[:, :, s] = sl
+                
+            labeled_3d = measure.label(brain_clean_mask)
+            regions_3d = measure.regionprops(labeled_3d)
+            if regions_3d:
+                largest_region = max(regions_3d, key=lambda r: r.area)
+                brain_clean_mask = (labeled_3d == largest_region.label)
+                
+            brain_mask = ants.from_numpy(brain_clean_mask.astype(np.float32), spacing=patient.spacing)
+            
+            # Run Atropos (exact same arguments as train_unet.py)
+            seg_result = ants.atropos(
+                a = patient,
+                m = '[0.2,1x1x1]',
+                c = '[5,0.00001]',
+                i = 'kmeans[3]',
+                x = brain_mask
+            )
+            seg_arr = seg_result['segmentation'].numpy().astype(np.int16)
+            
+            # Save the segmentation mask as NIfTI
+            import nibabel as nib
+            seg_path = active_mri.replace(".nii", "_seg.nii").replace("_n4_seg.nii", "_seg.nii")
+            try:
+                nib_img = nib.load(active_mri)
+                seg_nib = nib.Nifti1Image(seg_arr, nib_img.affine)
+                seg_nib.header.set_data_dtype(np.int16)
+                seg_nib.header.set_qform(nib_img.affine, code=1)
+                seg_nib.header.set_sform(nib_img.affine, code=1)
+                seg_nib.header.set_zooms(nib_img.header.get_zooms()[:3])
+                nib.save(seg_nib, seg_path)
+                print(f"Saved upload segmentation mask to {seg_path}")
+            except Exception as e:
+                print(f"[WARNING] Failed to save segmentation mask NIfTI: {e}")
+            
+            # Spacing
+            spacing = patient.spacing
+            voxel_vol_ml = (spacing[0] * spacing[1] * spacing[2]) / 1000.0
+            
+            csf_vol = float((seg_arr == 1).sum() * voxel_vol_ml)
+            gm_vol = float((seg_arr == 2).sum() * voxel_vol_ml)
+            wm_vol = float((seg_arr == 3).sum() * voxel_vol_ml)
+            tbv_vol = gm_vol + wm_vol
+            
+            # Affine registration for Hippocampus
+            reg = ants.registration(fixed=patient, moving=template, type_of_transform="Affine")
+            warped_labels = ants.apply_transforms(
+                fixed=patient,
+                moving=labels,
+                transformlist=reg['fwdtransforms'],
+                interpolation='nearestNeighbor'
+            )
+            warped_arr = warped_labels.numpy()
+            
+            left_vox = (warped_arr == 9).sum()
+            right_vox = (warped_arr == 19).sum()
+            
+            left_hippo = float(left_vox * voxel_vol_ml)
+            right_hippo = float(right_vox * voxel_vol_ml)
+            
+            volumetric_stats = {
+                "total_brain_volume_ml": tbv_vol,
+                "gray_matter_volume_ml": gm_vol,
+                "white_matter_volume_ml": wm_vol,
+                "csf_volume_ml": csf_vol,
+                "left_hippocampus_volume_ml": left_hippo,
+                "right_hippocampus_volume_ml": right_hippo,
+                "total_hippocampus_volume_ml": left_hippo + right_hippo
+            }
+            print("Successfully calculated 3D volumetric statistics.")
+        else:
+            print("[WARNING] Template files not found, skipping volumetric stats.")
+    except Exception as e:
+        print(f"[WARNING] Volumetric statistics calculation failed: {e}")
+
     return {
         "rule_based_vector": flat_vector,
         "centroid": {"row": centroid_row, "col": centroid_col},
@@ -115,7 +232,8 @@ def run_feature_extraction(mri_path: str):
             "min_col": bbox_min_col,
             "max_row": bbox_max_row,
             "max_col": bbox_max_col
-        }
+        },
+        "volumetric_statistics": volumetric_stats
     }
 
 
@@ -317,6 +435,33 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
             self.handle_api_report(patient_id)
         elif path == '/api/logs':
             self.handle_api_logs(parsed_url.query)
+        elif path.startswith('/uploads/') or path.startswith('/ixi-t1/') or path.startswith('/ixi-t1-masks/'):
+            # Serve these static MRI / segmentation files from the workspace directory
+            rel_path = urllib.parse.unquote(path.lstrip('/'))
+            full_path = os.path.join(WORKSPACE_DIR, rel_path)
+            
+            # Normalize path and check if it exists and is within WORKSPACE_DIR for safety
+            full_path = os.path.abspath(full_path)
+            if full_path.lower().startswith(os.path.abspath(WORKSPACE_DIR).lower()) and os.path.exists(full_path) and os.path.isfile(full_path):
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/octet-stream')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                
+                fs = os.path.getsize(full_path)
+                self.send_header('Content-Length', str(fs))
+                self.end_headers()
+                
+                try:
+                    with open(full_path, 'rb') as fh:
+                        while True:
+                            chunk = fh.read(8192)
+                            if not chunk:
+                                break
+                            self.wfile.write(chunk)
+                except Exception as e:
+                    print(f"Error sending file: {e}")
+            else:
+                self.send_error(404, "File not found")
         else:
             # Fallback to serve static web content
             super().do_GET()
@@ -425,6 +570,10 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
                     feature_data["structural_features"]["centroid"] = extraction_results["centroid"]
                     feature_data["structural_features"]["bounding_box"] = extraction_results["bbox"]
                     
+                    # Add volumetric statistics if available
+                    if "volumetric_statistics" in extraction_results and extraction_results["volumetric_statistics"] is not None:
+                        feature_data["volumetric_statistics"] = extraction_results["volumetric_statistics"]
+                    
                     # Cache it
                     cache_payload = feature_data.copy()
                     cache_payload["rule_based_array"] = rule_based_vector
@@ -469,11 +618,43 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
             self.send_error(404, "Patient not found")
             return
             
+        # Resolve static URLs for NIfTI viewer
+        mri_url = None
+        seg_url = None
+        
+        if source == "uploads":
+            # For uploads, we check the directory contents
+            mri_url = f"/uploads/{patient_id}/{patient_id}_n4.nii"
+            seg_url = f"/uploads/{patient_id}/{patient_id}_seg.nii"
+        else:
+            # For dataset patients, search recursively in ixi-t1 using prefix (subject ID)
+            try:
+                prefix = "-".join(patient_id.split("-")[:3])
+                # Find matching scan in ixi-t1
+                dataset_dir = os.path.join(WORKSPACE_DIR, "ixi-t1")
+                mri_files = list(pathlib.Path(dataset_dir).rglob("*.nii"))
+                for f in mri_files:
+                    if f.is_file() and f.name.startswith(prefix):
+                        mri_url = "/" + f.relative_to(WORKSPACE_DIR).as_posix()
+                        break
+                        
+                # Find matching mask in ixi-t1-masks
+                mask_dir = os.path.join(WORKSPACE_DIR, "ixi-t1-masks")
+                seg_files = list(pathlib.Path(mask_dir).glob(f"*_seg.nii"))
+                for f in seg_files:
+                    if f.is_file() and f.name.startswith(prefix):
+                        seg_url = "/" + f.relative_to(WORKSPACE_DIR).as_posix()
+                        break
+            except Exception as e:
+                print(f"[WARNING] Error discovering dataset NIfTI files: {e}")
+
         # Format response
         response = feature_data.copy()
         response["source"] = source
         response["rule_based_array"] = rule_based_vector
         response["predicted_array"] = predicted_vector
+        response["mri_url"] = mri_url
+        response["seg_url"] = seg_url
         
         self.send_json_response(response)
 
@@ -623,8 +804,26 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
                 
             print(f"Saved uploaded scan to {dest_file}")
             
-            # Immediately run dynamic feature extraction on save
-            run_feature_extraction(dest_file)
+            # Immediately run dynamic feature extraction and cache it
+            extraction_results = run_feature_extraction(dest_file)
+            rule_based_vector = extraction_results["rule_based_vector"]
+            feature_data = features_list_to_dict(
+                filename=filename,
+                features=rule_based_vector
+            )
+            feature_data["structural_features"]["centroid"] = extraction_results["centroid"]
+            feature_data["structural_features"]["bounding_box"] = extraction_results["bbox"]
+            if "volumetric_statistics" in extraction_results and extraction_results["volumetric_statistics"] is not None:
+                feature_data["volumetric_statistics"] = extraction_results["volumetric_statistics"]
+                
+            # Cache payload
+            cache_payload = feature_data.copy()
+            cache_payload["rule_based_array"] = rule_based_vector
+            cache_file = os.path.join(dest_dir, "features.json")
+            temp_cache_file = cache_file + ".tmp"
+            with open(temp_cache_file, 'w') as f:
+                json.dump(cache_payload, f, indent=2)
+            os.replace(temp_cache_file, cache_file)
             
             self.send_json_response({
                 "status": "success",
@@ -815,7 +1014,39 @@ def create_temp_uploads_features_json() -> str:
 # SERVER INITIATOR
 # =============================================================================
 
+def download_volumetric_templates():
+    """Download MNI152 template and Harvard-Oxford labels if not present"""
+    template_path = os.path.join(CHECKPOINTS_DIR, "MNI152_T1_2mm_brain.nii.gz")
+    labels_path = os.path.join(CHECKPOINTS_DIR, "HarvardOxford-sub-maxprob-thr25-2mm.nii.gz")
+    
+    if not os.path.exists(template_path) or not os.path.exists(labels_path):
+        import urllib.request
+        os.makedirs(CHECKPOINTS_DIR, exist_ok=True)
+        
+        # Download template
+        if not os.path.exists(template_path):
+            print("[INFO] Downloading MNI152 2mm T1 template brain (from HCP pipelines)...")
+            try:
+                url = "https://github.com/Washington-University/HCPpipelines/raw/master/global/templates/MNI152_T1_2mm.nii.gz"
+                urllib.request.urlretrieve(url, template_path)
+                print("[INFO] MNI152 template downloaded successfully.")
+            except Exception as e:
+                print(f"[ERROR] Failed to download template: {e}")
+                
+        # Download labels
+        if not os.path.exists(labels_path):
+            print("[INFO] Downloading Harvard-Oxford subcortical labels (from NeuroVault)...")
+            try:
+                url = "http://neurovault.org/media/images/262/HarvardOxford-sub-maxprob-thr25-2mm.nii.gz"
+                req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+                with urllib.request.urlopen(req) as response, open(labels_path, 'wb') as out_file:
+                    out_file.write(response.read())
+                print("[INFO] Harvard-Oxford labels downloaded successfully.")
+            except Exception as e:
+                print(f"[ERROR] Failed to download labels: {e}")
+
 def start_server():
+    download_volumetric_templates()
     socketserver.ThreadingTCPServer.allow_reuse_address = True
     with socketserver.ThreadingTCPServer(("", PORT), DashboardAPIHandler) as httpd:
         print(f"\n==================================================")
