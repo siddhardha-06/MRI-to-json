@@ -7,6 +7,8 @@ document.addEventListener("DOMContentLoaded", () => {
     let availablePatients = [];
     let isRunningStep = false;
     let logPollInterval = null;
+    let mriqcPollingInterval = null;
+    let lastMriqcLogCount = 0;
 
     // Elements
     const activeScanName = document.getElementById("active-scan-name");
@@ -135,6 +137,99 @@ document.addEventListener("DOMContentLoaded", () => {
                     appendConsoleLog("Please select a patient first.", "warning-msg");
                 }
             });
+        }
+
+        // Run Official MRIQC Docker container
+        const btnRunMriqcDocker = document.getElementById("btn-run-mriqc-docker");
+        const mriqcDockerConsole = document.getElementById("mriqc-docker-console");
+        const mriqcDockerStatus = document.getElementById("mriqc-docker-status");
+        const mriqcDockerOutput = document.getElementById("mriqc-docker-output");
+        const mriqcDockerSpinner = document.getElementById("mriqc-docker-spinner");
+
+        if (btnRunMriqcDocker) {
+            btnRunMriqcDocker.addEventListener("click", () => {
+                if (!activePatientId) {
+                    appendConsoleLog("Please select a patient scan first.", "warning-msg");
+                    return;
+                }
+                
+                mriqcDockerConsole.style.display = "flex";
+                mriqcDockerSpinner.style.display = "block";
+                mriqcDockerStatus.textContent = "Status: Starting Docker run...";
+                mriqcDockerOutput.innerHTML = '<div class="console-line system-msg">Initializing Docker run request...</div>';
+                btnRunMriqcDocker.disabled = true;
+                btnRunMriqcDocker.textContent = "🐳 Running...";
+                lastMriqcLogCount = 0;
+
+                fetch(`/api/mriqc/run/${encodeURIComponent(activePatientId)}`, { method: 'POST' })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.status === "started") {
+                            appendConsoleLog(`Official MRIQC Docker container started for patient ${activePatientId}.`);
+                            mriqcPollingInterval = setInterval(() => {
+                                pollMriqcStatus(activePatientId);
+                            }, 2000);
+                        } else {
+                            mriqcDockerStatus.textContent = "Status: Failed to start";
+                            mriqcDockerSpinner.style.display = "none";
+                            btnRunMriqcDocker.disabled = false;
+                            btnRunMriqcDocker.textContent = "🐳 Run Official MRIQC (Docker)";
+                            mriqcDockerOutput.innerHTML += `<div class="console-line error-msg">Error: ${data.error || "Failed to start Docker process"}</div>`;
+                        }
+                    })
+                    .catch(err => {
+                        mriqcDockerStatus.textContent = "Status: Connection Error";
+                        mriqcDockerSpinner.style.display = "none";
+                        btnRunMriqcDocker.disabled = false;
+                        btnRunMriqcDocker.textContent = "🐳 Run Official MRIQC (Docker)";
+                        mriqcDockerOutput.innerHTML += `<div class="console-line error-msg">Error connecting to server: ${err}</div>`;
+                    });
+            });
+        }
+
+        function pollMriqcStatus(patientId) {
+            fetch(`/api/mriqc/status/${encodeURIComponent(patientId)}`)
+                .then(res => res.json())
+                .then(data => {
+                    mriqcDockerStatus.textContent = `Status: ${data.progress || data.status}`;
+                    
+                    if (data.logs && data.logs.length > lastMriqcLogCount) {
+                        const newLogs = data.logs.slice(lastMriqcLogCount);
+                        newLogs.forEach(line => {
+                            const lineEl = document.createElement("div");
+                            lineEl.className = "console-line";
+                            if (line.includes("ERROR") || line.includes("failed") || line.includes("exited with error")) {
+                                lineEl.classList.add("error-msg");
+                            } else if (line.includes("Successfully") || line.includes("complete") || line.includes("Reading")) {
+                                lineEl.classList.add("cmd-msg");
+                            }
+                            lineEl.textContent = line.trim();
+                            mriqcDockerOutput.appendChild(lineEl);
+                        });
+                        lastMriqcLogCount = data.logs.length;
+                        mriqcDockerOutput.scrollTop = mriqcDockerOutput.scrollHeight;
+                    }
+
+                    if (data.status === "completed") {
+                        clearInterval(mriqcPollingInterval);
+                        mriqcPollingInterval = null;
+                        mriqcDockerSpinner.style.display = "none";
+                        btnRunMriqcDocker.disabled = false;
+                        btnRunMriqcDocker.textContent = "🐳 Run Official MRIQC (Docker)";
+                        appendConsoleLog(`Official MRIQC Docker run completed successfully for patient ${patientId}.`);
+                        selectPatient(patientId);
+                    } else if (data.status === "failed") {
+                        clearInterval(mriqcPollingInterval);
+                        mriqcPollingInterval = null;
+                        mriqcDockerSpinner.style.display = "none";
+                        btnRunMriqcDocker.disabled = false;
+                        btnRunMriqcDocker.textContent = "🐳 Run Official MRIQC (Docker)";
+                        appendConsoleLog(`Official MRIQC Docker run failed for patient ${patientId}.`, "error-msg");
+                    }
+                })
+                .catch(err => {
+                    console.error("Error polling MRIQC status:", err);
+                });
         }
 
         // File upload drag & drop
@@ -340,6 +435,24 @@ document.addEventListener("DOMContentLoaded", () => {
         activePatientId = patientId;
         activeScanName.textContent = patientId;
         
+        // Reset MRIQC tab controls and polling state
+        if (mriqcPollingInterval) {
+            clearInterval(mriqcPollingInterval);
+            mriqcPollingInterval = null;
+        }
+        lastMriqcLogCount = 0;
+        
+        const btnRunMriqcDocker = document.getElementById("btn-run-mriqc-docker");
+        const mriqcDockerConsole = document.getElementById("mriqc-docker-console");
+        const mriqcDockerStatus = document.getElementById("mriqc-docker-status");
+        
+        if (mriqcDockerConsole) mriqcDockerConsole.style.display = "none";
+        if (btnRunMriqcDocker) {
+            btnRunMriqcDocker.disabled = false;
+            btnRunMriqcDocker.textContent = "🐳 Run Official MRIQC (Docker)";
+        }
+        if (mriqcDockerStatus) mriqcDockerStatus.textContent = "Status: Idle (Docker MRIQC not run)";
+        
         // Show loaders
         emptyViewport.style.display = "none";
         analysisViewport.style.display = "flex";
@@ -519,6 +632,81 @@ document.addEventListener("DOMContentLoaded", () => {
         } else {
             comparisonStatusText.textContent = "Train the Feature Regressor (Step 4) to verify predictions.";
             comparisonStatusText.style.color = "var(--text-muted)";
+        }
+
+        // Populate MRIQC Quality Control Tab
+        const tblMriqc = document.getElementById("table-mriqc-details");
+        if (tblMriqc && patientData.mriqc_metrics) {
+            const mriqcDockerStatus = document.getElementById("mriqc-docker-status");
+            if (mriqcDockerStatus) {
+                mriqcDockerStatus.textContent = "Status: Completed (Official MRIQC run)";
+            }
+            const mriqc = patientData.mriqc_metrics;
+            tblMriqc.innerHTML = `
+                <tr><td>Coefficient of Joint Variation (CJV)</td><td>${mriqc.cjv.toFixed(4)}</td></tr>
+                <tr><td>Contrast-to-Noise Ratio (CNR)</td><td>${mriqc.cnr.toFixed(4)}</td></tr>
+                <tr><td>Entropy Focus Criterion (EFC)</td><td>${mriqc.efc.toFixed(4)}</td></tr>
+                <tr><td>Foreground-to-Background Energy Ratio (FBER)</td><td>${mriqc.fber.toFixed(2)}</td></tr>
+                <tr><td>White Matter SNR (SNR_WM)</td><td>${mriqc.snr_wm.toFixed(4)}</td></tr>
+                <tr><td>Gray Matter SNR (SNR_GM)</td><td>${mriqc.snr_gm.toFixed(4)}</td></tr>
+                <tr><td>CSF SNR (SNR_CSF)</td><td>${mriqc.snr_csf.toFixed(4)}</td></tr>
+                <tr><td>Ghosting Artifact Index (QI_1)</td><td>${mriqc.qi_1.toFixed(6)}</td></tr>
+            `;
+
+            // Calculate overall quality score and grade
+            // CJV optimal < 0.75; CNR optimal > 1.2; EFC optimal < 0.95; QI_1 optimal < 0.05
+            let score = 100;
+            if (mriqc.cjv > 0.75) score -= 15;
+            if (mriqc.cjv > 0.85) score -= 15;
+            if (mriqc.cnr < 1.20) score -= 15;
+            if (mriqc.cnr < 0.80) score -= 15;
+            if (mriqc.efc > 0.95) score -= 15;
+            if (mriqc.efc > 0.97) score -= 15;
+            if (mriqc.qi_1 > 0.05) score -= 10;
+            if (mriqc.qi_1 > 0.08) score -= 10;
+
+            let grade = "A+";
+            let label = "Excellent";
+            let desc = "This scan meets or exceeds all clinical quality thresholds. Signal-to-noise ratio is high, and motion artifacts are minimal.";
+            let gradeClass = "grade-excellent";
+
+            if (score >= 90) {
+                grade = "A+"; label = "Excellent"; gradeClass = "grade-excellent";
+            } else if (score >= 75) {
+                grade = "B"; label = "Good"; desc = "Good quality scan. Mild blur or intensity variation detected, but fully sufficient for reliable clinical feature extraction."; gradeClass = "grade-good";
+            } else if (score >= 60) {
+                grade = "C"; label = "Acceptable"; desc = "Acceptable scan quality. Moderate noise, distortion, or artifact levels present. Interpret metrics with slight caution."; gradeClass = "grade-acceptable";
+            } else {
+                grade = "F"; label = "Poor"; desc = "Poor scan quality. Significant motion artifacts, low signal-to-noise ratio, or severe distortion detected. Rescan recommended."; gradeClass = "grade-poor";
+            }
+
+            const badge = document.getElementById("mriqc-rating-badge");
+            const qLabel = document.getElementById("mriqc-quality-label");
+            const qDesc = document.getElementById("mriqc-quality-desc");
+
+            if (badge) {
+                badge.textContent = grade;
+                badge.className = "rating-badge " + gradeClass;
+            }
+            if (qLabel) qLabel.textContent = label;
+            if (qDesc) qDesc.textContent = desc;
+
+            // Update threshold status dots (green, yellow, red)
+            const updateDot = (id, isGreen, isYellow) => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.className = "threshold-dot " + (isGreen ? "status-green" : isYellow ? "status-yellow" : "status-red");
+                }
+            };
+
+            updateDot("dot-cjv", mriqc.cjv < 0.75, mriqc.cjv < 0.85);
+            updateDot("dot-cnr", mriqc.cnr > 1.20, mriqc.cnr > 0.80);
+            updateDot("dot-efc", mriqc.efc < 0.95, mriqc.efc < 0.97);
+            updateDot("dot-qi1", mriqc.qi_1 < 0.05, mriqc.qi_1 < 0.08);
+        } else if (tblMriqc) {
+            tblMriqc.innerHTML = `
+                <tr><td colspan="2" style="color: #64748b; text-align: center; font-style: italic; padding: 20px 0; font-size: 11px;">Image Quality Metrics unavailable for this scan.</td></tr>
+            `;
         }
     }
 

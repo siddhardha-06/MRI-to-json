@@ -269,6 +269,7 @@
                             <button class="tab-btn active" data-tab="tab-metrics" id="btn-tab-metrics">Quantitative Metrics</button>
                             <button class="tab-btn" data-tab="tab-comparison" id="btn-tab-comparison">Features Comparison (40 Dims)</button>
                             <button class="tab-btn" data-tab="tab-report" id="btn-tab-report">Gemini Clinical Report</button>
+                            <button class="tab-btn" data-tab="tab-mriqc" id="btn-tab-mriqc">Image Quality Control (MRIQC)</button>
                         </div>
 
                         <div class="tabs-content-container flex-grow">
@@ -369,6 +370,85 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Tab: Image Quality Control (MRIQC) -->
+                            <div class="tab-pane" id="tab-mriqc">
+                                <div class="mriqc-dashboard">
+                                    <!-- Docker Run Control Row -->
+                                    <div class="mriqc-docker-row" style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); padding: 12px 20px; border-radius: 12px; margin-bottom: 20px; gap: 16px;">
+                                        <div style="display: flex; flex-direction: column;">
+                                            <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Official MRIQC Validation</span>
+                                            <span style="font-size: 11px; color: var(--text-secondary);" id="mriqc-docker-status">Status: Idle (Docker MRIQC not run)</span>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline" id="btn-run-mriqc-docker" style="font-weight: 600; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 0 10px rgba(139, 92, 246, 0.1);">
+                                            🐳 Run Official MRIQC (Docker)
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Docker Terminal Logs (initially hidden) -->
+                                    <div class="glass-card console-card" id="mriqc-docker-console" style="display: none; height: 180px; margin-bottom: 20px; flex-direction: column;">
+                                        <div class="card-header-row" style="padding: 8px 16px; border-bottom: 1px solid var(--border-color);">
+                                            <h4 style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-cyan);">MRIQC Docker Output logs</h4>
+                                            <div class="progress-spinner" id="mriqc-docker-spinner" style="width: 12px; height: 12px; border-width: 2px; display: none;"></div>
+                                        </div>
+                                        <div class="console-body" id="mriqc-docker-output" style="padding: 10px; font-size: 10px; flex-grow: 1; overflow-y: auto;">
+                                            <div class="console-line system-msg">Ready to initialize Docker container...</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Quality Rating Banner -->
+                                    <div class="mriqc-rating-banner" id="mriqc-rating-banner">
+                                        <div class="rating-badge" id="mriqc-rating-badge">A+</div>
+                                        <div class="rating-info">
+                                            <h4>Overall Scan Quality: <span id="mriqc-quality-label">Excellent</span></h4>
+                                            <p id="mriqc-quality-desc">This scan meets or exceeds all clinical quality thresholds. Signal-to-noise ratio is high, and motion artifacts are minimal.</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="mriqc-grid">
+                                        <!-- Table of metrics -->
+                                        <div class="metric-group-card">
+                                            <h4>MRIQC Image Quality Metrics (IQMs)</h4>
+                                            <table class="metric-table" id="table-mriqc-details">
+                                                <!-- Dynamically populated -->
+                                            </table>
+                                        </div>
+
+                                        <!-- Reference Guides / Alert levels -->
+                                        <div class="metric-group-card mriqc-explanation-card">
+                                            <h4>Clinical QA Reference Thresholds</h4>
+                                            <div class="mriqc-threshold-item">
+                                                <span class="threshold-dot status-green" id="dot-cjv"></span>
+                                                <div class="threshold-info">
+                                                    <strong>Coefficient of Joint Variation (CJV):</strong>
+                                                    <span class="threshold-desc">Measures GM/WM overlap (intensity non-uniformity). Healthy reference: &lt; 0.75.</span>
+                                                </div>
+                                            </div>
+                                            <div class="mriqc-threshold-item">
+                                                <span class="threshold-dot status-green" id="dot-cnr"></span>
+                                                <div class="threshold-info">
+                                                    <strong>Contrast-to-Noise Ratio (CNR):</strong>
+                                                    <span class="threshold-desc">Tissue separation contrast. Healthy reference: &gt; 1.2.</span>
+                                                </div>
+                                            </div>
+                                            <div class="mriqc-threshold-item">
+                                                <span class="threshold-dot status-green" id="dot-efc"></span>
+                                                <div class="threshold-info">
+                                                    <strong>Entropy Focus Criterion (EFC):</strong>
+                                                    <span class="threshold-desc">Image blur and ghosting. Healthy reference: &lt; 0.95.</span>
+                                                </div>
+                                            </div>
+                                            <div class="mriqc-threshold-item">
+                                                <span class="threshold-dot status-green" id="dot-qi1"></span>
+                                                <div class="threshold-info">
+                                                    <strong>Ghosting Artifact Index (QI_1):</strong>
+                                                    <span class="threshold-desc">Background noise outliers / ghosting. Healthy reference: &lt; 0.05.</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -383,6 +463,6 @@
         </main>
     </div>
     
-    <script src="app.js"></script>
+    <script src="app.js?v=2"></script>
 </body>
 </html>

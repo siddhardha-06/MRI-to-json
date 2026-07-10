@@ -36,6 +36,124 @@ active_process = None
 active_logs = []
 is_running = False
 
+import shutil
+
+mriqc_jobs = {}
+
+def run_official_mriqc_thread(patient_id, mri_path):
+    global mriqc_jobs
+    job = mriqc_jobs.setdefault(patient_id, {"status": "idle", "logs": [], "progress": ""})
+    job["status"] = "running"
+    job["progress"] = "Preparing BIDS directory..."
+    job["logs"] = ["Initializing official MRIQC pipeline...\n"]
+
+    bids_temp_dir = os.path.join(WORKSPACE_DIR, "uploads", "bids_temp")
+    bids_out_dir = os.path.join(WORKSPACE_DIR, "uploads", "bids_out")
+    
+    bids_id = "".join(c for c in patient_id if c.isalnum())
+    sub_anat_dir = os.path.join(bids_temp_dir, f"sub-{bids_id}", "anat")
+    
+    try:
+        # Clean previous temp files
+        if os.path.exists(sub_anat_dir):
+            try:
+                shutil.rmtree(sub_anat_dir)
+            except Exception:
+                pass
+        os.makedirs(sub_anat_dir, exist_ok=True)
+        os.makedirs(bids_out_dir, exist_ok=True)
+        
+        # Write BIDS dataset_description.json in bids_temp_dir root
+        desc_file = os.path.join(bids_temp_dir, "dataset_description.json")
+        with open(desc_file, 'w') as df:
+            json.dump({"Name": "NeuroSphere Dataset", "BIDSVersion": "1.8.0"}, df)
+
+        # Copy to BIDS dest
+        dest_nii_path = os.path.join(sub_anat_dir, f"sub-{bids_id}_T1w.nii")
+        job["logs"].append(f"Copying scan to BIDS layout: {dest_nii_path}\n")
+        shutil.copy2(mri_path, dest_nii_path)
+    except Exception as e:
+        job["status"] = "failed"
+        job["logs"].append(f"BIDS directory setup failed: {str(e)}\n")
+        return
+
+    abs_temp_dir = os.path.abspath(bids_temp_dir).replace('\\', '/')
+    abs_out_dir = os.path.abspath(bids_out_dir).replace('\\', '/')
+    
+    cmd = f'docker run --rm -v "{abs_temp_dir}:/data:ro" -v "{abs_out_dir}:/out" nipreps/mriqc:23.1.0 /data /out participant --participant-label {bids_id} --no-sub'
+    
+    job["logs"].append(f"Executing: {cmd}\n")
+    job["progress"] = "Running MRIQC Docker container..."
+    
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            shell=True
+        )
+        
+        while True:
+            line = proc.stdout.readline()
+            if not line:
+                break
+            decoded = line.decode('utf-8', errors='ignore')
+            job["logs"].append(decoded)
+            
+        proc.wait()
+        
+        if proc.returncode != 0:
+            job["status"] = "failed"
+            job["logs"].append(f"Docker process exited with error code {proc.returncode}\n")
+            return
+            
+        expected_json = os.path.join(bids_out_dir, f"sub-{bids_id}", "anat", f"sub-{bids_id}_T1w.json")
+        if not os.path.exists(expected_json):
+            job["status"] = "failed"
+            job["logs"].append(f"MRIQC completed but output JSON was not found at {expected_json}\n")
+            return
+            
+        job["logs"].append(f"Reading generated MRIQC JSON file...\n")
+        with open(expected_json, 'r') as fh:
+            mriqc_data = json.load(fh)
+            
+        parsed_metrics = {
+            "cjv": float(mriqc_data.get("cjv", 0.0)) if mriqc_data.get("cjv") is not None else 0.0,
+            "cnr": float(mriqc_data.get("cnr", 0.0)) if mriqc_data.get("cnr") is not None else 0.0,
+            "efc": float(mriqc_data.get("efc", 0.0)) if mriqc_data.get("efc") is not None else 0.0,
+            "fber": float(mriqc_data.get("fber", 0.0)) if mriqc_data.get("fber") is not None else 0.0,
+            "snr_wm": float(mriqc_data.get("snr_wm", 0.0)) if mriqc_data.get("snr_wm") is not None else 0.0,
+            "snr_gm": float(mriqc_data.get("snr_gm", 0.0)) if mriqc_data.get("snr_gm") is not None else 0.0,
+            "snr_csf": float(mriqc_data.get("snr_csf", 0.0)) if mriqc_data.get("snr_csf") is not None else 0.0,
+            "qi_1": float(mriqc_data.get("qi_1", 0.0)) if mriqc_data.get("qi_1") is not None else 0.0
+        }
+        
+        # Save cache
+        patient_cache_file = os.path.join(WORKSPACE_DIR, "uploads", patient_id, "features.json")
+        if os.path.exists(patient_cache_file):
+            with open(patient_cache_file, 'r') as f:
+                feat_dict = json.load(f)
+            feat_dict["mriqc_metrics"] = parsed_metrics
+            with open(patient_cache_file, 'w') as f:
+                json.dump(feat_dict, f, indent=2)
+            job["logs"].append("Successfully updated local features.json cache.\n")
+        else:
+            if os.path.exists(FEATURES_FILE):
+                with open(FEATURES_FILE, 'r') as f:
+                    all_pred = json.load(f)
+                if patient_id in all_pred:
+                    all_pred[patient_id]["mriqc_metrics"] = parsed_metrics
+                    with open(FEATURES_FILE, 'w') as f:
+                        json.dump(all_pred, f, indent=2)
+                    job["logs"].append("Successfully updated predicted_features.json.\n")
+                    
+        job["status"] = "completed"
+        job["progress"] = "Official MRIQC complete!"
+        
+    except Exception as e:
+        job["status"] = "failed"
+        job["logs"].append(f"Error during MRIQC run: {str(e)}\n")
+
 # Ensure dirs exist
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 os.makedirs(REPORTS_DIR, exist_ok=True)
@@ -224,6 +342,9 @@ def run_feature_extraction(mri_path: str):
     except Exception as e:
         print(f"[WARNING] Volumetric statistics calculation failed: {e}")
 
+    # Calculate MRIQC metrics
+    mriqc_metrics = None
+
     return {
         "rule_based_vector": flat_vector,
         "centroid": {"row": centroid_row, "col": centroid_col},
@@ -233,7 +354,8 @@ def run_feature_extraction(mri_path: str):
             "max_row": bbox_max_row,
             "max_col": bbox_max_col
         },
-        "volumetric_statistics": volumetric_stats
+        "volumetric_statistics": volumetric_stats,
+        "mriqc_metrics": mriqc_metrics
     }
 
 
@@ -433,6 +555,9 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
         elif path.startswith('/api/report/'):
             patient_id = path.split('/api/report/')[1]
             self.handle_api_report(patient_id)
+        elif path.startswith('/api/mriqc/status/'):
+            patient_id = path.split('/api/mriqc/status/')[1]
+            self.handle_api_mriqc_status(patient_id)
         elif path == '/api/logs':
             self.handle_api_logs(parsed_url.query)
         elif path.startswith('/uploads/') or path.startswith('/ixi-t1/') or path.startswith('/ixi-t1-masks/'):
@@ -474,6 +599,9 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
             self.handle_api_upload()
         elif path == '/api/run-step':
             self.handle_api_run_step()
+        elif path.startswith('/api/mriqc/run/'):
+            patient_id = path.split('/api/mriqc/run/')[1]
+            self.handle_api_mriqc_run(patient_id)
         else:
             self.send_error(404, "Endpoint not found")
 
@@ -552,6 +680,22 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
                 except Exception:
                     pass
             
+            # If cached data is present but lacks volumetric_statistics, compute and cache it now
+            if feature_data and "volumetric_statistics" not in feature_data:
+                try:
+                    nii_path = str(nii_files[0])
+                    extraction_results = run_feature_extraction(nii_path)
+                    if "volumetric_statistics" in extraction_results and extraction_results["volumetric_statistics"] is not None:
+                        feature_data["volumetric_statistics"] = extraction_results["volumetric_statistics"]
+                    
+                    # Update cache
+                    cache_payload = feature_data.copy()
+                    cache_payload["rule_based_array"] = rule_based_vector
+                    with open(cache_file, 'w') as f:
+                        json.dump(cache_payload, f, indent=2)
+                except Exception as e:
+                    print(f"[WARNING] Dynamic cache upgrade for volumetric statistics failed: {e}")
+            
             if not feature_data:
                 # Calculate and cache
                 try:
@@ -573,6 +717,10 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
                     # Add volumetric statistics if available
                     if "volumetric_statistics" in extraction_results and extraction_results["volumetric_statistics"] is not None:
                         feature_data["volumetric_statistics"] = extraction_results["volumetric_statistics"]
+                        
+                    # Add MRIQC metrics if available
+                    if "mriqc_metrics" in extraction_results and extraction_results["mriqc_metrics"] is not None:
+                        feature_data["mriqc_metrics"] = extraction_results["mriqc_metrics"]
                     
                     # Cache it
                     cache_payload = feature_data.copy()
@@ -623,9 +771,17 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
         seg_url = None
         
         if source == "uploads":
-            # For uploads, we check the directory contents
-            mri_url = f"/uploads/{patient_id}/{patient_id}_n4.nii"
-            seg_url = f"/uploads/{patient_id}/{patient_id}_seg.nii"
+            # For uploads, check directory contents and only expose existing files
+            mri_path_rel = f"uploads/{patient_id}/{patient_id}_n4.nii"
+            if not os.path.exists(os.path.join(WORKSPACE_DIR, mri_path_rel)):
+                mri_path_rel = f"uploads/{patient_id}/{patient_id}.nii"
+                
+            if os.path.exists(os.path.join(WORKSPACE_DIR, mri_path_rel)):
+                mri_url = "/" + mri_path_rel
+            
+            seg_path_rel = f"uploads/{patient_id}/{patient_id}_seg.nii"
+            if os.path.exists(os.path.join(WORKSPACE_DIR, seg_path_rel)):
+                seg_url = "/" + seg_path_rel
         else:
             # For dataset patients, search recursively in ixi-t1 using prefix (subject ID)
             try:
@@ -647,6 +803,9 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
                         break
             except Exception as e:
                 print(f"[WARNING] Error discovering dataset NIfTI files: {e}")
+
+        # Ensure mriqc_metrics is populated in feature_data if available
+        pass
 
         # Format response
         response = feature_data.copy()
@@ -720,6 +879,38 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
                 report_content = f"Patient metrics not found. Cannot generate clinical report."
 
         self.send_json_response({"report": report_content})
+
+    def handle_api_mriqc_status(self, patient_id):
+        patient_id = urllib.parse.unquote(patient_id)
+        job = mriqc_jobs.get(patient_id, {"status": "idle", "logs": [], "progress": ""})
+        self.send_json_response(job)
+
+    def handle_api_mriqc_run(self, patient_id):
+        patient_id = urllib.parse.unquote(patient_id)
+        mri_path = None
+        # 1. Check if upload folder has it
+        upload_file = os.path.join(UPLOADS_DIR, patient_id, f"{patient_id}.nii")
+        if os.path.exists(upload_file):
+            mri_path = upload_file
+        # 2. Check if precomputed dataset has it
+        if not mri_path:
+            dataset_dir = os.path.join(WORKSPACE_DIR, "ixi-t1")
+            prefix = patient_id.split("-")[0]
+            import pathlib
+            mri_files = list(pathlib.Path(dataset_dir).rglob("*.nii"))
+            for f in mri_files:
+                if f.is_file() and f.name.startswith(prefix):
+                    mri_path = str(f)
+                    break
+                    
+        if not mri_path:
+            self.send_json_response({"status": "error", "error": f"MRI scan file not found for patient {patient_id}."})
+            return
+            
+        t = threading.Thread(target=run_official_mriqc_thread, args=(patient_id, mri_path))
+        t.daemon = True
+        t.start()
+        self.send_json_response({"status": "started"})
 
     # API: Streams pipeline logs
     def handle_api_logs(self, query):
@@ -816,6 +1007,9 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
             if "volumetric_statistics" in extraction_results and extraction_results["volumetric_statistics"] is not None:
                 feature_data["volumetric_statistics"] = extraction_results["volumetric_statistics"]
                 
+            if "mriqc_metrics" in extraction_results and extraction_results["mriqc_metrics"] is not None:
+                feature_data["mriqc_metrics"] = extraction_results["mriqc_metrics"]
+                
             # Cache payload
             cache_payload = feature_data.copy()
             cache_payload["rule_based_array"] = rule_based_vector
@@ -907,12 +1101,25 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
 
     # Utilities
     def send_json_response(self, data):
-        response_bytes = json.dumps(data).encode('utf-8')
+        sanitized_data = sanitize_nan(data)
+        response_bytes = json.dumps(sanitized_data).encode('utf-8')
         self.send_response(200)
         self.send_header('Content-Type', 'application/json')
         self.send_header('Content-Length', len(response_bytes))
         self.end_headers()
         self.wfile.write(response_bytes)
+
+
+def sanitize_nan(data):
+    if isinstance(data, dict):
+        return {k: sanitize_nan(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [sanitize_nan(v) for v in data]
+    elif isinstance(data, float):
+        import math
+        if math.isnan(data) or math.isinf(data):
+            return None
+    return data
 
 
 # =============================================================================
