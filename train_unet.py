@@ -171,6 +171,36 @@ class UNet2D(nn.Module):
         return self.final(x)
 
 
+class DiceLoss(nn.Module):
+    """
+    Multiclass Dice Loss for semantic segmentation.
+    Computes Dice loss for all foreground classes (1, 2, 3) and averages them.
+    """
+    def __init__(self, smooth=1e-6):
+        super(DiceLoss, self).__init__()
+        self.smooth = smooth
+
+    def forward(self, logits, targets):
+        num_classes = logits.shape[1]
+        probs = torch.softmax(logits, dim=1)
+        
+        # One-hot encode targets to (B, C, H, W)
+        targets_one_hot = torch.nn.functional.one_hot(targets, num_classes).permute(0, 3, 1, 2).float()
+        
+        dice_loss = 0.0
+        # Exclude background (class 0) from Dice Loss optimization
+        for c in range(1, num_classes):
+            p_c = probs[:, c, :, :]
+            t_c = targets_one_hot[:, c, :, :]
+            
+            intersection = (p_c * t_c).sum()
+            total = p_c.sum() + t_c.sum()
+            
+            dice_loss += 1.0 - (2.0 * intersection + self.smooth) / (total + self.smooth)
+            
+        return dice_loss / (num_classes - 1)
+
+
 # =============================================================================
 # 2. ANTsPy Pseudo-label Generator (replaces SynthSeg)
 # =============================================================================
@@ -602,11 +632,6 @@ class MRISegmentationDataset(Dataset):
             mri_t = torch.flip(mri_t, dims=[2])
             mask_t = torch.flip(mask_t, dims=[1])
 
-        # Random vertical flip (50%)
-        if random.random() > 0.5:
-            mri_t = torch.flip(mri_t, dims=[1])
-            mask_t = torch.flip(mask_t, dims=[0])
-
         # Random rotation (±15 degrees)
         if random.random() > 0.5:
             angle = random.uniform(-15, 15)
@@ -789,13 +814,21 @@ def train_unet(
     model = UNet2D(in_channels=1, num_classes=4, base_filters=64).to(device)
     # num_classes=4: Background(0), CSF(1), GM(2), WM(3)
 
-    # Loss: weighted cross-entropy (brain classes weighted higher than background)
+    # Loss: weighted cross-entropy + Dice Loss (hybrid)
     class_weights = torch.tensor([0.1, 0.3, 0.3, 0.3]).to(device)
-    criterion     = nn.CrossEntropyLoss(weight=class_weights)
+    ce_loss = nn.CrossEntropyLoss(weight=class_weights)
+    dice_loss = DiceLoss()
+    
+    def hybrid_criterion(logits, targets):
+        return ce_loss(logits, targets) + 0.5 * dice_loss(logits, targets)
+        
+    criterion = hybrid_criterion
 
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode='min', factor=0.5, patience=5
+    # Optimizer: AdamW with weight decay (L2 regularization) to prevent overfitting
+    optimizer = optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=1e-4)
+    # Scheduler: Cosine Annealing LR scheduler
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(
+        optimizer, T_max=num_epochs, eta_min=1e-5
     )
 
     history  = {"epoch": [], "train_loss": [], "val_loss": []}
@@ -841,7 +874,7 @@ def train_unet(
 
         avg_val_loss = total_val_loss / max(len(val_loader), 1)
 
-        scheduler.step(avg_val_loss)
+        scheduler.step()
 
         history["epoch"].append(epoch + 1)
         history["train_loss"].append(avg_train_loss)

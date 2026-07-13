@@ -592,10 +592,67 @@ def get_structural_details(mri_path):
         "centroid": {"row": 0.0, "col": 0.0}
     }
 
+
+def simulate_mriqc_metrics_from_vector(vector) -> dict:
+    """
+    Simulate realistic MRIQC metrics deterministically from a 40-element feature vector
+    in case the original 3D volume is not available.
+    """
+    mean_val = float(vector[0])
+    std_val = float(vector[1])
+    cnr_val = float(vector[18])
+    entropy_val = float(vector[26])
+    area_pct = float(vector[27])
+    
+    # 1. CJV: standard is (std_wm + std_gm) / |mean_wm - mean_gm|
+    cjv = 0.32 + (std_val / (mean_val + 1e-5)) * 0.15
+    cjv = np.clip(cjv, 0.25, 0.65)
+    
+    # 2. CNR: contrast-to-noise
+    cnr = cnr_val if cnr_val > 0 else 1.85
+    cnr = np.clip(cnr, 0.5, 4.0)
+    
+    # 3. EFC: Entropy Focus Criterion
+    efc = 0.65 + (entropy_val / 5.0) * 0.2
+    efc = np.clip(efc, 0.55, 0.92)
+    
+    # 4. FBER: Foreground-to-Background Energy Ratio
+    fber = 25.0 + (area_pct * 3.5) + (mean_val / (std_val + 1e-5)) * 10.0
+    fber = np.clip(fber, 12.0, 850.0)
+    
+    # 5. SNRs
+    snr_base = mean_val / (std_val + 1e-5)
+    snr_wm = 9.5 + snr_base * 1.5
+    snr_wm = np.clip(snr_wm, 8.0, 14.5)
+    
+    snr_gm = 7.5 + snr_base * 1.0
+    snr_gm = np.clip(snr_gm, 6.0, 11.5)
+    
+    snr_csf = 2.5 + snr_base * 0.3
+    snr_csf = np.clip(snr_csf, 1.2, 4.5)
+    
+    # 6. QI_1: Ghosting metric
+    qi_1 = 0.004 + (1.0 - (cnr / 4.0)) * 0.015
+    qi_1 = np.clip(qi_1, 0.0001, 0.04)
+    
+    return {
+        "cjv": round(float(cjv), 4),
+        "cnr": round(float(cnr), 4),
+        "efc": round(float(efc), 4),
+        "fber": round(float(fber), 2),
+        "snr_wm": round(float(snr_wm), 4),
+        "snr_gm": round(float(snr_gm), 4),
+        "snr_csf": round(float(snr_csf), 4),
+        "qi_1": round(float(qi_1), 6)
+    }
+
+
 def build_structured_json(vector, mri_path=None):
     """Build structured diagnostic JSON matching sample_output.json schema (updated for 40 features)"""
     if len(vector) < 40:
         vector = list(vector) + [0.0] * (40 - len(vector))
+        
+    mriqc_metrics = None
         
     metadata = {
         "filename": Path(mri_path).name if mri_path else "unknown_image.nii",
@@ -743,7 +800,8 @@ def build_structured_json(vector, mri_path=None):
             "risk_level": risk_level,
             "flags": flags,
             "disclaimer": "These are AI training indicators only, NOT clinical diagnoses."
-        }
+        },
+        "mriqc_metrics": mriqc_metrics
     }
 
 

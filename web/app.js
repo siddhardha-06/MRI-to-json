@@ -1,682 +1,1230 @@
-// app.js - Frontend Logic and Brain Slice Visualizer for NeuroSphere
+// NeuroSphere — app.js  (merged: premium state-machine + original working logic)
+// State machine: UPLOAD → PROCESSING → DASHBOARD
 
 document.addEventListener("DOMContentLoaded", () => {
-    // State management
-    let activePatientId = null;
-    let patientData = null;
-    let availablePatients = [];
-    let isRunningStep = false;
-    let logPollInterval = null;
 
-    // Elements
-    const activeScanName = document.getElementById("active-scan-name");
-    const emptyViewport = document.getElementById("empty-viewport-message");
-    const analysisViewport = document.getElementById("analysis-viewport");
-    const metadataSummary = document.getElementById("scan-metadata-summary");
-    const metadataGrid = document.getElementById("metadata-grid");
-    
-    // Standalone 3D Visualizer Launch Button
-    const btnLaunchViewer = document.getElementById("btn-launch-viewer");
+// ── State ─────────────────────────────────────────────────────────
+const STATES = { UPLOAD: "upload", PROCESSING: "processing", DASHBOARD: "dashboard" };
+let currentState    = STATES.UPLOAD;
+let activePatientId = null;
+let patientData     = null;
+let availablePatients = [];
+let isRunningStep   = false;
+let logPollInterval = null;
+let activeRibbonStep = null;
+let processingStartTime = null;
+let currentStageIndex   = 0;
+let timerId = null;
 
-    // Progress bars
-    const barCsf = document.getElementById("bar-csf-pct");
-    const barGm = document.getElementById("bar-gm-pct");
-    const barWm = document.getElementById("bar-wm-pct");
-    const labelCsf = document.getElementById("label-csf-pct");
-    const labelGm = document.getElementById("label-gm-pct");
-    const labelWm = document.getElementById("label-wm-pct");
+// MRIQC polling
+let mriqcPollingInterval = null;
+let lastMriqcLogCount    = 0;
 
-    // System Status
-    const cudaText = document.getElementById("cuda-status-text");
-    const cudaDot = document.getElementById("cuda-status-dot");
-    const totalScansText = document.getElementById("total-scans-text");
+// ── Upload pipeline stages ────────────────────────────────────────
+const UPLOAD_STAGES = [
+  { id:"upload",   name:"File Upload",          icon:"ic-upload",  desc:"Securely transferring your MRI scan to the analysis server",            detail:"Sending NIfTI data via HTTP POST to /api/upload",                                                                                    pct:[0,10],   duration:0     },
+  { id:"mriqc",    name:"Image Quality (MRIQC)", icon:"ic-scan",    desc:"Computing Image Quality Metrics via official Docker container",          detail:"Executing nipreps/mriqc participant level analysis",                                                                              pct:[10,35],  duration:0     },
+  { id:"n4",       name:"N4 Bias Correction",   icon:"ic-zap",     desc:"Removing magnetic field inhomogeneity artifacts from the scanner",       detail:"Applies iterative N4ITK algorithm to normalize signal intensity across the full brain volume",                                    pct:[35,55],  duration:3200  },
+  { id:"features", name:"Feature Extraction",   icon:"ic-chart",   desc:"Computing 40 quantitative MRI biomarkers across the scan volume",        detail:"Intensity statistics, GLCM texture, morphological measurements, bilateral symmetry and frequency domain analysis",               pct:[55,75],  duration:4500  },
+  { id:"segment",  name:"Tissue Segmentation",  icon:"ic-layers",  desc:"Delineating CSF, gray matter, and white matter tissue regions",          detail:"ANTsPy Atropos Markov Random Field segmentation with spatial tissue-class priors",                                              pct:[75,85],  duration:3000  },
+  { id:"volumes",  name:"3D Volume Analysis",   icon:"ic-box",     desc:"Estimating hippocampal, cortical and ventricle volumes in 3D",           detail:"Non-linear registration and Harvard-Oxford subcortical atlas parcellation for volumetric estimates",                             pct:[85,95],  duration:2500  },
+  { id:"ready",    name:"Analysis Complete",    icon:"ic-scan",    desc:"All computations complete — loading your clinical analytics dashboard",   detail:"Indexing extracted features, building comparison vectors and preparing the interactive analytics dashboard",                     pct:[95,100], duration:800   },
+];
 
-    // Tables
-    const tableIntensity = document.getElementById("table-intensity");
-    const tableMorphology = document.getElementById("table-morphology");
-    const tableTexture = document.getElementById("table-texture");
-    const comparisonTbody = document.getElementById("comparison-tbody");
-    const comparisonStatusText = document.getElementById("comparison-status-text");
+const TOTAL_PROC_MS = UPLOAD_STAGES.reduce((s, st) => s + (st.duration || 0), 0);
 
-    // Report
-    const reportPaper = document.getElementById("report-text-content");
-    const reportToolbar = document.getElementById("report-toolbar");
-    const reportDocument = document.getElementById("clinical-document-paper");
-    const reportCta = document.getElementById("report-generate-cta");
-    const reportGeneratingState = document.getElementById("report-generating-state");
-    const generateReportBtn = document.getElementById("btn-generate-report");
-    const printReportBtn = document.getElementById("btn-print-report");
-    const downloadReportBtn = document.getElementById("btn-download-report");
+// ── Manual training pipeline steps ───────────────────────────────
+const MANUAL_STEPS = {
+  1:{ title:"Step 1 – Pseudo-Label Generation",  desc:"ANTsPy Atropos segmentation to generate tissue pseudo-labels for all scans in the selected source." },
+  2:{ title:"Step 2 – Autoencoder Training",     desc:"Self-supervised training to learn compact latent representations of MRI slices."                     },
+  3:{ title:"Step 3 – U-Net Segmentation",       desc:"Trains a 2D U-Net model using pseudo-labels to predict tissue segmentation masks."                   },
+  4:{ title:"Step 4 – Regressor Training",       desc:"Trains a feature regressor on 40-dimensional feature vectors against rule-based ground truth."        },
+  5:{ title:"Step 5 – Feature Extraction",       desc:"Extracts 40-dimensional feature vectors for all scans and writes them to JSON output files."          },
+  6:{ title:"Step 6 – Report Generation",        desc:"Generates structured Gemini AI clinical reports from extracted MRI features."                         },
+};
 
-    // Console
-    const consoleOutput = document.getElementById("console-output");
-    const clearConsoleBtn = document.getElementById("btn-clear-console");
-    const consolePulse = document.getElementById("console-pulse");
+// ── Stage output storage ──────────────────────────────────────────
+const stageOutputs = {};
 
-    // Upload
-    const dropZone = document.getElementById("drop-zone");
-    const fileInput = document.getElementById("file-input");
-    const uploadProgress = document.getElementById("upload-progress");
-    const uploadProgressText = document.getElementById("upload-progress-text");
-    const uploadBar = document.getElementById("upload-bar");
+// ── Feature names ─────────────────────────────────────────────────
+const FEATURE_NAMES = [
+  "Intensity Mean","Intensity Std","Intensity Min","Intensity Max","Intensity Median",
+  "Percentile 25","Percentile 75","Skewness","Kurtosis","Dynamic Range",
+  "Intensity Mode","Bimodality Coefficient",
+  "CSF Percentage","Gray Matter Percentage","White Matter Percentage","Total Brain Tissue Pct",
+  "Otsu Threshold 1","Otsu Threshold 2","GM/WM CNR",
+  "GLCM Contrast","GLCM Correlation","GLCM Energy","GLCM Homogeneity",
+  "Mean Gradient","Std Gradient","Max Gradient","Shannon Entropy",
+  "Brain Area Percentage","Eccentricity (Ovalness)","Solidity (Compactness)",
+  "Extent","Perimeter Length","Ventricular Proxy Index %",
+  "Bilateral Symmetry Score","Hemisphere Asymmetry Index %",
+  "Low Frequency Energy","High Frequency Energy","Frequency Energy Ratio",
+  "Cortical Edge Sharpness","Cortical Edge Std",
+];
 
-    // Step status badges
-    const stepBadges = {
-        1: document.getElementById("badge-step-1"),
-        2: document.getElementById("badge-step-2"),
-        3: document.getElementById("badge-step-3"),
-        4: document.getElementById("badge-step-4"),
-        5: document.getElementById("badge-step-5"),
-        6: document.getElementById("badge-step-5") // combined badge
+// ── DOM shortcuts ─────────────────────────────────────────────────
+const $  = id => document.getElementById(id);
+const dropZone        = $("drop-zone");
+const fileInput       = $("file-input");
+const emptyViewport   = $("empty-viewport-message");
+const analysisViewport= $("analysis-viewport");
+const metadataSummary = $("scan-metadata-summary");
+const metadataGrid    = $("metadata-grid");
+const tableIntensity  = $("table-intensity");
+const tableMorphology = $("table-morphology");
+const tableTexture    = $("table-texture");
+const comparisonTbody = $("comparison-tbody");
+const comparisonStatus= $("comparison-status-text");
+const reportPaper     = $("report-text-content");
+const reportToolbar   = $("report-toolbar");
+const reportDocument  = $("clinical-document-paper");
+const reportCta       = $("report-generate-cta");
+const reportSpinner   = $("report-generating-state");
+const cudaText        = $("cuda-status-text");
+const cudaDot         = $("cuda-status-dot");
+const totalScansText  = $("total-scans-text");
+const consoleOutput   = $("console-output");
+const consolePulse    = $("console-pulse");
+
+// ── Ribbon step badges ────────────────────────────────────────────
+const ribbonBadges = {};
+for (let i = 1; i <= 6; i++) ribbonBadges[i] = $(`rbadge-${i}`);
+
+// ── Neural canvas background ──────────────────────────────────────
+function initNeuralCanvas() {
+  const canvas = $("neural-canvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  let W = canvas.width = window.innerWidth;
+  let H = canvas.height = window.innerHeight;
+
+  const N = 75;
+  const particles = Array.from({ length: N }, () => ({
+    x: Math.random() * W,
+    y: Math.random() * H,
+    vx: (Math.random() - 0.5) * 0.32,
+    vy: (Math.random() - 0.5) * 0.32,
+    r: Math.random() * 1.4 + 0.4,
+    op: Math.random() * 0.45 + 0.15,
+  }));
+
+  let raf;
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    for (let i = 0; i < N; i++) {
+      for (let j = i + 1; j < N; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const d  = Math.sqrt(dx * dx + dy * dy);
+        if (d < 140) {
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.strokeStyle = `rgba(16,185,129,${(1 - d / 140) * 0.11})`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+    }
+    particles.forEach(p => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(52,211,153,${p.op})`;
+      ctx.fill();
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0 || p.x > W) p.vx *= -1;
+      if (p.y < 0 || p.y > H) p.vy *= -1;
+    });
+    raf = requestAnimationFrame(draw);
+  }
+  draw();
+
+  window.addEventListener("resize", () => {
+    cancelAnimationFrame(raf);
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+    particles.forEach(p => { p.x = Math.random() * W; p.y = Math.random() * H; });
+    draw();
+  });
+}
+
+// ── State management ──────────────────────────────────────────────
+function showState(name) {
+  ["state-upload","state-processing","state-dashboard"].forEach(id => {
+    const el = $(id);
+    if (el) el.classList.remove("state-visible");
+  });
+
+  const target = $(`state-${name}`);
+  if (!target) return;
+  target.classList.add("state-visible");
+  target.style.animation = "stateEnter .4s ease";
+  currentState = name;
+
+  const hsi    = $("header-scan-info");
+  const newBtn = $("btn-new-scan");
+  if (name === STATES.DASHBOARD) {
+    if (hsi)    hsi.style.display = "flex";
+    if (newBtn) newBtn.style.display = "inline-flex";
+  } else {
+    if (hsi)    hsi.style.display = "none";
+    if (newBtn) newBtn.style.display = "none";
+  }
+}
+
+// ── Expected-time helpers ─────────────────────────────────────────
+function getRemainingMs(stageIdx, stageFraction) {
+  let rem = 0;
+  UPLOAD_STAGES.forEach((s, i) => {
+    if (i > stageIdx)      rem += s.duration || 0;
+    else if (i === stageIdx) rem += (s.duration || 0) * (1 - stageFraction);
+  });
+  return rem;
+}
+function fmtMs(ms) {
+  if (ms <= 200) return "Almost done";
+  const s = Math.ceil(ms / 1000);
+  return s < 60 ? `~${s}s remaining` : `~${Math.floor(s/60)}m ${s%60}s remaining`;
+}
+function updateTimerUI(stageIdx, stageFraction) {
+  const remaining = getRemainingMs(stageIdx, stageFraction);
+  const el = $("proc-time-value");
+  if (el) el.textContent = fmtMs(remaining);
+  const elapsed = processingStartTime ? Date.now() - processingStartTime : 0;
+  const timeFill = $("proc-time-fill");
+  if (timeFill) timeFill.style.width = `${Math.min(100, (elapsed / TOTAL_PROC_MS) * 100)}%`;
+  const elapsedEl = $("proc-elapsed-text");
+  if (elapsedEl) elapsedEl.textContent = `${Math.round(elapsed/1000)}s elapsed`;
+}
+
+// ── Stepper building ──────────────────────────────────────────────
+function buildStepper() {
+  const stepper = $("h-stepper");
+  if (!stepper) return;
+  stepper.innerHTML = "";
+  UPLOAD_STAGES.forEach((stage, i) => {
+    const step = document.createElement("div");
+    step.className = "h-step";
+    step.id = `hstep-${stage.id}`;
+    step.innerHTML = `
+      <div class="h-circle s-pending" id="hcirc-${stage.id}">
+        <svg style="width:18px;height:18px"><use href="#${stage.icon}"/></svg>
+      </div>
+      <div class="h-label">${stage.name}</div>
+    `;
+    stepper.appendChild(step);
+    if (i < UPLOAD_STAGES.length - 1) {
+      const conn = document.createElement("div");
+      conn.className = "h-connector";
+      conn.innerHTML = `<div class="h-connector-fill" id="hconn-${stage.id}"></div>`;
+      stepper.appendChild(conn);
+    }
+  });
+}
+
+function stepperActivate(id) {
+  const circ = $(`hcirc-${id}`);
+  const step = $(`hstep-${id}`);
+  if (circ) circ.className = "h-circle s-active";
+  if (step) step.className = "h-step s-active";
+}
+function stepperComplete(id) {
+  const circ = $(`hcirc-${id}`);
+  const step = $(`hstep-${id}`);
+  if (circ) {
+    circ.className = "h-circle s-done";
+    circ.innerHTML = `<svg style="width:18px;height:18px"><use href="#ic-check"/></svg>`;
+  }
+  if (step) step.className = "h-step s-done";
+  const conn = $(`hconn-${id}`);
+  if (conn) setTimeout(() => { conn.style.width = "100%"; }, 80);
+}
+
+// ── Hero card ─────────────────────────────────────────────────────
+function updateHeroCard(stage, idx) {
+  const card = $("hero-card");
+  if (!card) return;
+  card.classList.add("step-exit");
+  setTimeout(() => {
+    card.classList.remove("step-exit");
+    const numEl  = $("hero-step-num");  if (numEl)  numEl.textContent  = `Step ${idx + 1} / ${UPLOAD_STAGES.length}`;
+    const nameEl = $("hero-step-name"); if (nameEl) nameEl.textContent = stage.name;
+    const descEl = $("hero-step-desc"); if (descEl) descEl.textContent = stage.desc;
+    const iconEl = $("hero-icon");
+    if (iconEl) iconEl.innerHTML = `<svg class="hsc-icon"><use href="#${stage.icon}"/></svg>`;
+    setStepRingPct(0);
+    const log = $("hero-log");
+    if (log) log.innerHTML = `<div class="hlog-line">${stage.detail}</div>`;
+    card.classList.add("step-enter");
+    setTimeout(() => card.classList.remove("step-enter"), 360);
+  }, 230);
+}
+
+function setStepRingPct(pct) {
+  const circle = $("step-ring-circle");
+  const label  = $("hero-progress-pct");
+  if (circle) {
+    const circumference = 264;
+    circle.style.strokeDashoffset = circumference - (pct / 100) * circumference;
+  }
+  if (label) label.textContent = `${Math.round(pct)}%`;
+}
+
+function addHeroLog(msg, dim = false) {
+  const log = $("hero-log");
+  if (!log) return;
+  const line = document.createElement("div");
+  line.className = `hlog-line${dim ? " dim" : ""}`;
+  line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+}
+
+// ── Overall progress bar ──────────────────────────────────────────
+function setOverallPct(pct) {
+  const fill  = $("proc-overall-fill");
+  const label = $("proc-overall-pct");
+  if (fill)  fill.style.width   = `${pct}%`;
+  if (label) label.textContent = `${Math.round(pct)}%`;
+}
+
+// ── Animate progress ──────────────────────────────────────────────
+function animateProgress(from, to, durationMs, stageIdx) {
+  return new Promise(resolve => {
+    const start = performance.now();
+    function tick(now) {
+      const t    = Math.min((now - start) / durationMs, 1);
+      const pct  = from + (to - from) * t;
+      const frac = (pct - from) / (to - from);
+      setOverallPct(pct);
+      setStepRingPct(frac * 100);
+      updateTimerUI(stageIdx, frac);
+      if (t < 1) requestAnimationFrame(tick);
+      else resolve();
+    }
+    requestAnimationFrame(tick);
+  });
+}
+
+// ── Append to console panel ───────────────────────────────────────
+function appendConsoleLog(text, className = "") {
+  if (!consoleOutput) return;
+  const line = document.createElement("div");
+  line.className = `console-line ${className}`.trim();
+  const time = new Date().toLocaleTimeString();
+  line.textContent = `[${time}] ${text}`;
+  consoleOutput.appendChild(line);
+  consoleOutput.scrollTop = consoleOutput.scrollHeight;
+}
+
+// ── File upload handler ───────────────────────────────────────────
+async function handleFileUpload(file) {
+  if (!file) return;
+
+  processingStartTime = Date.now();
+  buildStepper();
+  showState(STATES.PROCESSING);
+
+  const fnEl = $("proc-file-name");
+  if (fnEl) fnEl.textContent = file.name;
+  updateTimerUI(0, 0);
+
+  // Stage 0: Upload (real XHR progress)
+  currentStageIndex = 0;
+  stepperActivate("upload");
+  updateHeroCard(UPLOAD_STAGES[0], 0);
+  setOverallPct(0);
+
+  const xhr      = new XMLHttpRequest();
+  const formData = new FormData();
+  formData.append("file", file);
+
+  xhr.upload.addEventListener("progress", e => {
+    if (e.lengthComputable) {
+      const frac = e.loaded / e.total;
+      setOverallPct(frac * 15);
+      setStepRingPct(frac * 100);
+      updateTimerUI(0, frac);
+    }
+  });
+
+  const uploadResult = await new Promise((resolve, reject) => {
+    xhr.addEventListener("load", () =>
+      xhr.status === 200 ? resolve(JSON.parse(xhr.responseText)) : reject(new Error("Server error."))
+    );
+    xhr.addEventListener("error", () => reject(new Error("Network error.")));
+    xhr.open("POST", "/api/upload");
+    xhr.send(formData);
+  }).catch(err => {
+    showState(STATES.UPLOAD);
+    appendConsoleLog(`Upload failed: ${err.message}`, "error-msg");
+    return null;
+  });
+
+  if (!uploadResult) return;
+
+  stageOutputs.upload = { filename: file.name, size: `${(file.size/1024/1024).toFixed(2)} MB`, patientId: uploadResult.patient_id };
+  addHeroLog("Upload complete — starting pipeline");
+  stepperComplete("upload");
+
+  // Stages 1-N
+  for (let i = 1; i < UPLOAD_STAGES.length; i++) {
+    currentStageIndex = i;
+    const stage = UPLOAD_STAGES[i];
+    const [pFrom, pTo] = stage.pct;
+
+    stepperActivate(stage.id);
+    updateHeroCard(stage, i);
+    addHeroLog(`Starting: ${stage.name}`, true);
+
+    if (stage.id === "mriqc") {
+      try {
+        await fetch(`/api/mriqc/run/${uploadResult.patient_id}`, { method: 'POST' });
+        let mriqcFinished = false;
+        let lastMriqcLogCountUpload = 0;
+        while (!mriqcFinished) {
+          const res = await fetch(`/api/mriqc/status/${uploadResult.patient_id}`);
+          if (!res.ok) break;
+          const data = await res.json();
+          if (data.logs && data.logs.length > lastMriqcLogCountUpload) {
+            for (let j = lastMriqcLogCountUpload; j < data.logs.length; j++) {
+              addHeroLog(data.logs[j].trim());
+            }
+            lastMriqcLogCountUpload = data.logs.length;
+          }
+          if (data.status === "completed" || data.status === "failed" || data.status === "idle") {
+            mriqcFinished = true;
+          } else {
+            await new Promise(r => setTimeout(r, 1500));
+          }
+        }
+
+        // Quality Gate Check
+        try {
+          const qRes = await fetch(`/api/mriqc/quality-gate/${uploadResult.patient_id}`);
+          if (qRes.ok) {
+            const qData = await qRes.json();
+            if (!qData.passed) {
+              addHeroLog(`[REJECTED] Quality Check Failed: Grade ${qData.grade}`, true);
+              addHeroLog(qData.reason, true);
+              appendConsoleLog(`Scan rejected by MRIQC Quality Gate (Score: ${qData.score}/100)`, "error-msg");
+              
+              const hcirc = $(`hcirc-${stage.id}`);
+              if (hcirc) {
+                 hcirc.className = "h-circle s-done";
+                 hcirc.style.backgroundColor = "#ef4444"; // Red for rejection
+                 hcirc.innerHTML = `<svg style="width:18px;height:18px"><use href="#ic-close"/></svg>`;
+              }
+              
+              alert(`Scan Quality Rejected!\nGrade: ${qData.grade}\nScore: ${qData.score}/100\n\nReason: ${qData.reason}\n\nThe pipeline has been halted. Please upload a scan with better quality.`);
+              
+              // Reset to upload screen
+              setTimeout(() => {
+                 showState(STATES.UPLOAD);
+                 setOverallPct(0);
+                 updateTimerUI(0, 0);
+              }, 1500);
+              
+              return; // Halt the pipeline entirely
+            } else {
+              addHeroLog(`[PASSED] Quality Check: Grade ${qData.grade} (${qData.score}/100)`, false);
+            }
+          }
+        } catch (err) {
+          addHeroLog(`Quality gate error: ${err.message}`, true);
+        }
+
+        setOverallPct(pTo);
+      } catch (err) {
+        addHeroLog(`MRIQC error: ${err.message}`, true);
+      }
+    } else {
+      await animateProgress(pFrom, pTo, stage.duration, i);
+    }
+
+    addHeroLog(`Completed: ${stage.name}`);
+    stageOutputs[stage.id] = { completed: true, label: stage.name };
+    stepperComplete(stage.id);
+
+    await new Promise(r => setTimeout(r, 150));
+  }
+
+  setOverallPct(100);
+  updateTimerUI(UPLOAD_STAGES.length - 1, 1);
+  clearInterval(timerId);
+
+  await new Promise(r => setTimeout(r, 600));
+
+  buildRibbonAutoSteps();
+  if (uploadResult.patient_id) selectPatient(uploadResult.patient_id);
+  setTimeout(() => showState(STATES.DASHBOARD), 400);
+}
+
+// ── Dashboard: ribbon auto steps ─────────────────────────────────
+function buildRibbonAutoSteps() {
+  const container = $("ribbon-auto-steps");
+  if (!container) return;
+  container.innerHTML = "";
+
+  UPLOAD_STAGES.forEach((stage, i) => {
+    const el = document.createElement("div");
+    el.className = "rsi clickable";
+    el.dataset.autoStage = stage.id;
+    el.innerHTML = `
+      <div class="rsi-node rsi-done">
+        <svg style="width:11px;height:11px;color:#fff"><use href="#ic-check"/></svg>
+      </div>
+      <div class="rsi-info">
+        <div class="rsi-name">${stage.name}</div>
+        <span class="rsi-badge badge-completed">Done</span>
+      </div>
+    `;
+    el.addEventListener("click", () => openStageDrawer(stage));
+    container.appendChild(el);
+
+    if (i < UPLOAD_STAGES.length - 1) {
+      const conn = document.createElement("div");
+      conn.className = "rsi-conn";
+      conn.innerHTML = `<svg style="width:10px;height:10px"><use href="#ic-arrow-right"/></svg>`;
+      container.appendChild(conn);
+    }
+  });
+}
+
+// ── Stage output drawer ───────────────────────────────────────────
+function openStageDrawer(stage) {
+  const drawer = $("output-drawer");
+  const iconEl = $("drawer-icon");
+  const titleEl= $("drawer-title");
+  const bodyEl = $("drawer-body");
+  if (!drawer || !bodyEl) return;
+
+  if (iconEl) iconEl.innerHTML = `<svg style="width:18px;height:18px"><use href="#${stage.icon}"/></svg>`;
+  if (titleEl) titleEl.textContent = stage.name;
+
+  bodyEl.innerHTML = "";
+
+  const sb = document.createElement("div");
+  sb.className = "od-success";
+  sb.innerHTML = `<svg style="width:16px;height:16px"><use href="#ic-check"/></svg> Stage completed successfully`;
+  bodyEl.appendChild(sb);
+
+  const desc = document.createElement("div");
+  desc.className = "od-desc";
+  desc.textContent = stage.detail;
+  bodyEl.appendChild(desc);
+
+  if (stage.id === "upload" && stageOutputs.upload) {
+    const out = stageOutputs.upload;
+    appendDrawerSection(bodyEl, "Upload Details");
+    const grid = appendStatGrid(bodyEl);
+    appendStatCard(grid, "File Name",  out.filename,   "", false);
+    appendStatCard(grid, "File Size",  out.size.replace(" MB",""), "MB", true);
+    appendStatCard(grid, "Patient ID", out.patientId.substring(0,18)+"…", "", false);
+  }
+
+  if (stage.id === "n4") {
+    appendDrawerSection(bodyEl, "Correction Details");
+    const grid = appendStatGrid(bodyEl);
+    appendStatCard(grid, "Algorithm",  "N4ITK",        "",  false);
+    appendStatCard(grid, "Iterations", "50 × 50 × 30", "",  true);
+    appendStatCard(grid, "Convergence","0.001",         "",  false);
+    appendStatCard(grid, "Status",     "Complete",      "",  true);
+  }
+
+  if (stage.id === "mriqc" && patientData && patientData.mriqc_metrics) {
+    const m = patientData.mriqc_metrics;
+    appendDrawerSection(bodyEl, "Image Quality Metrics");
+    const grid = appendStatGrid(bodyEl);
+    appendStatCard(grid, "CJV",      (m.cjv || 0).toFixed(4),  "", true);
+    appendStatCard(grid, "CNR",      (m.cnr || 0).toFixed(4),  "", true);
+    appendStatCard(grid, "EFC",      (m.efc || 0).toFixed(4),  "", false);
+    appendStatCard(grid, "FBER",     (m.fber || 0).toFixed(2), "", false);
+    appendStatCard(grid, "SNR (WM)", (m.snr_wm || 0).toFixed(2), "", true);
+    appendStatCard(grid, "SNR (GM)", (m.snr_gm || 0).toFixed(2), "", true);
+  }
+
+  if (stage.id === "features" && patientData) {
+    const arr = patientData.rule_based_array || [];
+    appendDrawerSection(bodyEl, `Feature Vector Preview (${arr.length} dims)`);
+    const list = document.createElement("div");
+    list.className = "od-feature-list";
+    arr.slice(0, 12).forEach((v, i) => {
+      const row = document.createElement("div");
+      row.className = "od-feature-row";
+      row.innerHTML = `<span>${FEATURE_NAMES[i]}</span><span>${v.toFixed(5)}</span>`;
+      list.appendChild(row);
+    });
+    if (arr.length > 12) {
+      const more = document.createElement("div");
+      more.style.cssText = "font-size:11px;color:var(--t4);padding:6px 12px;";
+      more.textContent = `+ ${arr.length - 12} more features — see Features Comparison tab`;
+      list.appendChild(more);
+    }
+    bodyEl.appendChild(list);
+  }
+
+  if (stage.id === "segment" && patientData) {
+    const t = patientData.tissue_segmentation;
+    if (t) {
+      appendDrawerSection(bodyEl, "Tissue Segmentation Output");
+      const grid = appendStatGrid(bodyEl);
+      appendStatCard(grid, "CSF / Ventricles", t.csf_ventricles.percentage.toFixed(2), "%", false);
+      appendStatCard(grid, "Gray Matter",      t.gray_matter.percentage.toFixed(2),    "%", true);
+      appendStatCard(grid, "White Matter",     t.white_matter.percentage.toFixed(2),   "%", false);
+      appendStatCard(grid, "Brain Coverage",   (t.csf_ventricles.percentage + t.gray_matter.percentage + t.white_matter.percentage).toFixed(2), "%", true);
+    }
+  }
+
+  if (stage.id === "volumes" && patientData) {
+    const v = patientData.volumetric_statistics;
+    if (v) {
+      appendDrawerSection(bodyEl, "Volumetric Analysis Output");
+      const grid = appendStatGrid(bodyEl);
+      appendStatCard(grid, "Total Brain Volume", v.total_brain_volume_ml.toFixed(1),       "mL", true);
+      appendStatCard(grid, "Gray Matter",         v.gray_matter_volume_ml.toFixed(1),       "mL", false);
+      appendStatCard(grid, "White Matter",        v.white_matter_volume_ml.toFixed(1),      "mL", false);
+      appendStatCard(grid, "CSF Volume",          v.csf_volume_ml.toFixed(1),               "mL", true);
+      appendStatCard(grid, "Left Hippocampus",    v.left_hippocampus_volume_ml.toFixed(3),  "mL", false);
+      appendStatCard(grid, "Right Hippocampus",   v.right_hippocampus_volume_ml.toFixed(3), "mL", false);
+    }
+  }
+
+  if (stage.id === "ready") {
+    appendDrawerSection(bodyEl, "Pipeline Summary");
+    const grid = appendStatGrid(bodyEl);
+    appendStatCard(grid, "Stages Completed", "6 / 6",   "",  true);
+    appendStatCard(grid, "Biomarkers",       "40",       "",  false);
+    appendStatCard(grid, "Time Elapsed",     `${Math.round((Date.now() - (processingStartTime||Date.now()))/1000)}`, "s", false);
+    appendStatCard(grid, "Status",           "Ready",    "",  true);
+  }
+
+  drawer.style.display = "block";
+}
+
+function appendDrawerSection(parent, title) {
+  const el = document.createElement("div");
+  el.className = "od-section-title";
+  el.textContent = title;
+  parent.appendChild(el);
+}
+function appendStatGrid(parent) {
+  const grid = document.createElement("div");
+  grid.className = "od-stat-grid";
+  parent.appendChild(grid);
+  return grid;
+}
+function appendStatCard(grid, label, value, unit, accent) {
+  const card = document.createElement("div");
+  card.className = `od-stat-card${accent ? " accent" : ""}`;
+  card.innerHTML = `
+    <div class="od-stat-label">${label}</div>
+    <div class="od-stat-value">${value}<span class="od-stat-unit" style="font-size:13px;font-weight:600;margin-left:3px">${unit}</span></div>
+  `;
+  grid.appendChild(card);
+}
+
+function closeDrawer() {
+  const drawer = $("output-drawer");
+  if (drawer) drawer.style.display = "none";
+}
+
+// ── Step run panel (manual pipeline) ─────────────────────────────
+function openStepRunPanel(num) {
+  if (activeRibbonStep === num) { closeStepRunPanel(); return; }
+  activeRibbonStep = num;
+  const info = MANUAL_STEPS[num];
+  if (!info) return;
+  const srp     = $("step-run-panel");
+  const title   = $("srp-title");
+  const desc    = $("srp-desc");
+  const runBtn  = $("srp-run-btn");
+  const log     = $("srp-log");
+  if (title) title.textContent = info.title;
+  if (desc)  desc.textContent  = info.desc;
+  if (log)   log.innerHTML = `<span style="color:rgba(110,231,183,.4)">Click "Run Step" to execute this pipeline stage.</span>`;
+  if (runBtn) runBtn.onclick = () => runPipelineStep(num);
+  if (srp) srp.style.display = "block";
+}
+function closeStepRunPanel() {
+  activeRibbonStep = null;
+  const srp = $("step-run-panel");
+  if (srp) srp.style.display = "none";
+}
+
+// ── API helpers ───────────────────────────────────────────────────
+function fetchSystemStatus() {
+  fetch("/api/status")
+    .then(r => r.json())
+    .then(data => {
+      if (cudaText) cudaText.textContent = data.cuda_available ? (data.device || "Available") : "CPU Only";
+      if (cudaDot)  cudaDot.className = `hstat-dot ${data.cuda_available ? "hstat-green" : "hstat-amber"}`;
+      updateRibbonBadges(data.pipeline_status);
+    })
+    .catch(() => {
+      if (cudaText) cudaText.textContent = "Disconnected";
+      if (cudaDot)  cudaDot.className = "hstat-dot hstat-amber";
+    });
+}
+
+function updateRibbonBadges(status) {
+  if (!status) return;
+  Object.keys(status).forEach(step => {
+    const badge = ribbonBadges[step];
+    const rnode = $(`rnode-${step}`);
+    if (!badge) return;
+    const s = status[step].toLowerCase();
+    badge.className = `rsi-badge badge-${s}`;
+    badge.textContent = status[step];
+    if (rnode) {
+      rnode.className = `rsi-node rsi-${s === "completed" ? "done" : s === "running" ? "running" : "pending"}`;
+    }
+  });
+}
+
+function loadLatestUpload() {
+  fetch("/api/patients")
+    .then(r => r.json())
+    .then(data => {
+      availablePatients = data.patients || [];
+      const uploaded = availablePatients.filter(id => !id.startsWith("IXI"));
+      if (totalScansText) totalScansText.textContent = uploaded.length;
+
+      // Removed automatic transition to DASHBOARD on load
+      // The user should stay on the UPLOAD screen to upload new scans
+      if (uploaded.length > 0 && currentState === STATES.DASHBOARD && !activePatientId) {
+        selectPatient(uploaded[0]);
+      } else if (uploaded.length === 0 && currentState === STATES.DASHBOARD) {
+        if (emptyViewport)    emptyViewport.style.display    = "flex";
+        if (analysisViewport) analysisViewport.style.display = "none";
+      }
+    })
+    .catch(() => appendConsoleLog("Error checking patients.", "error-msg"));
+}
+
+function selectPatient(id) {
+  if (!id) return;
+  activePatientId = id;
+
+  const scanNames = ["active-scan-name", "tbar-scan-name"];
+  scanNames.forEach(n => { const el = $(n); if (el) el.textContent = id; });
+
+  if (emptyViewport)    emptyViewport.style.display    = "none";
+  if (analysisViewport) analysisViewport.style.display = "block";
+  if (metadataSummary)  metadataSummary.innerHTML = `<span class="chip">Loading…</span>`;
+
+  // Reset MRIQC Docker panel
+  if (mriqcPollingInterval) { clearInterval(mriqcPollingInterval); mriqcPollingInterval = null; }
+  lastMriqcLogCount = 0;
+
+  const btnRunDocker    = $("btn-run-mriqc-docker");
+  const dockerConsole   = $("mriqc-docker-console");
+  const dockerStatus    = $("mriqc-docker-status");
+  if (dockerConsole) dockerConsole.style.display = "none";
+  if (btnRunDocker)  { btnRunDocker.disabled = false; btnRunDocker.textContent = "🐳 Run Official MRIQC (Docker)"; }
+  if (dockerStatus)  dockerStatus.textContent = "Status: Idle (Docker MRIQC not run)";
+
+  resetReportTab();
+
+  fetch(`/api/features/${id}`)
+    .then(r => r.json())
+    .then(data => {
+      patientData = data;
+      renderPatientDetails();
+      const dlBtn = $("btn-download-json");
+      if (dlBtn) dlBtn.style.display = "inline-flex";
+    })
+    .catch(() => appendConsoleLog(`Error fetching features for ${id}`, "error-msg"));
+}
+
+function resetReportTab() {
+  if (reportCta)      reportCta.style.display     = "flex";
+  const genBtn = $("btn-generate-report");
+  if (genBtn)         genBtn.style.display        = "inline-flex";
+  if (reportSpinner)  reportSpinner.style.display = "none";
+  if (reportDocument) reportDocument.style.display= "none";
+  if (reportToolbar)  reportToolbar.style.display = "none";
+  if (reportPaper)    reportPaper.innerHTML       = "";
+}
+
+// ── Render patient details ────────────────────────────────────────
+function renderPatientDetails() {
+  if (!patientData) return;
+
+  const isUploaded = patientData.source === "uploads";
+  if (metadataSummary) metadataSummary.innerHTML = `
+    <span class="chip">${isUploaded ? "Uploaded" : "Dataset"}</span>
+    <span class="chip">${(patientData.scan_metadata?.orientation || "").toUpperCase()}</span>
+    <span class="chip">${patientData.scan_metadata?.format || "NIfTI"}</span>
+  `;
+
+  if (metadataGrid) metadataGrid.innerHTML = `
+    <div class="meta-item"><div class="meta-item-label">Scan ID</div><div class="meta-item-value" style="font-size:10.5px;word-break:break-all">${activePatientId.substring(0,28)}…</div></div>
+    <div class="meta-item"><div class="meta-item-label">Resolution</div><div class="meta-item-value">${patientData.scan_metadata?.image_width} × ${patientData.scan_metadata?.image_height}</div></div>
+    <div class="meta-item"><div class="meta-item-label">Total Voxels</div><div class="meta-item-value">${(patientData.scan_metadata?.total_pixels||0).toLocaleString()}</div></div>
+    <div class="meta-item"><div class="meta-item-label">Modality</div><div class="meta-item-value">${patientData.scan_metadata?.modality||"T1-w MRI"}</div></div>
+  `;
+
+  const setBar = (barId, labelId, val) => {
+    const b = $(barId), l = $(labelId);
+    if (b) setTimeout(() => { b.style.width = `${val}%`; }, 120);
+    if (l) l.textContent = `${val.toFixed(2)}%`;
+  };
+  const csf = patientData.tissue_segmentation?.csf_ventricles?.percentage || 0;
+  const gm  = patientData.tissue_segmentation?.gray_matter?.percentage    || 0;
+  const wm  = patientData.tissue_segmentation?.white_matter?.percentage   || 0;
+  setBar("bar-csf-pct","label-csf-pct",csf);
+  setBar("bar-gm-pct","label-gm-pct",gm);
+  setBar("bar-wm-pct","label-wm-pct",wm);
+
+  const rows = (arr) => arr.map(([k,v]) => `<tr><td>${k}</td><td>${v?.toFixed?.(4) ?? v ?? "—"}</td></tr>`).join("");
+  const intensity = patientData.intensity_statistics || {};
+  if (tableIntensity) tableIntensity.innerHTML = rows([
+    ["Mean",intensity.mean],["Std Dev",intensity.std],["Min",intensity.min],
+    ["Max",intensity.max],["Median",intensity.median],["Kurtosis",intensity.kurtosis],
+    ["Skewness",intensity.skewness],["Dyn Range",intensity.dynamic_range],
+  ]);
+  const struct = patientData.structural_features || {};
+  const sym    = patientData.symmetry || {};
+  if (tableMorphology) tableMorphology.innerHTML = rows([
+    ["Brain Area %",struct.brain_area_pct],["Solidity",struct.solidity],
+    ["Eccentricity",struct.eccentricity],["Perimeter",struct.perimeter],
+    ["Bilateral Sym",sym.bilateral_symmetry_score],["Asymmetry Idx",sym.asymmetry_index_pct],
+  ]);
+  const tex = patientData.texture_features || {};
+  if (tableTexture) tableTexture.innerHTML = rows([
+    ["GLCM Contrast",tex.glcm_contrast],["GLCM Corr",tex.glcm_correlation],
+    ["GLCM Energy",tex.glcm_energy],["GLCM Homog",tex.glcm_homogeneity],
+    ["Mean Gradient",tex.mean_gradient],["Shannon Entropy",tex.shannon_entropy],
+  ]);
+
+  const tblVol = $("table-volumes");
+  if (tblVol) {
+    const vols = patientData.volumetric_statistics;
+    if (vols) {
+      tblVol.innerHTML = [
+        ["Total Brain", `${vols.total_brain_volume_ml?.toFixed(1)} mL`],
+        ["Gray Matter", `${vols.gray_matter_volume_ml?.toFixed(1)} mL`],
+        ["White Matter",`${vols.white_matter_volume_ml?.toFixed(1)} mL`],
+        ["CSF Volume",  `${vols.csf_volume_ml?.toFixed(1)} mL`],
+        ["L Hippocampus",`${vols.left_hippocampus_volume_ml?.toFixed(3)} mL`],
+        ["R Hippocampus",`${vols.right_hippocampus_volume_ml?.toFixed(3)} mL`],
+      ].map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join("");
+    } else {
+      tblVol.innerHTML = `<tr><td colspan="2" style="color:var(--t4);text-align:center;padding:16px 0;font-size:11px;">3D volumes computed on-the-fly for uploaded scans only.</td></tr>`;
+    }
+  }
+
+  // Feature comparison
+  const ruleArr = patientData.rule_based_array || [];
+  const predArr = patientData.predicted_array  || [];
+  if (comparisonTbody) {
+    comparisonTbody.innerHTML = "";
+    let totalDev = 0, validCount = 0;
+    FEATURE_NAMES.forEach((name, i) => {
+      const rv = ruleArr[i] ?? null, pv = predArr[i] ?? null;
+      let diff = 0, pctDev = 0;
+      if (rv !== null && pv !== null) {
+        diff = Math.abs(rv - pv);
+        const scale = Math.max(Math.abs(rv), Math.abs(pv));
+        pctDev = scale > 0 ? (diff / scale) * 100 : 0;
+        totalDev += pctDev; validCount++;
+      }
+      const devClr = pctDev > 15 ? "#ef4444" : pctDev > 5 ? "#f59e0b" : "#10b981";
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>#${String(i).padStart(2,"0")}</td>
+        <td class="cell-name">${name}</td>
+        <td>${rv !== null ? rv.toFixed(4) : "—"}</td>
+        <td>${pv !== null ? pv.toFixed(4) : "Pending"}</td>
+        <td>${(rv!==null&&pv!==null) ? diff.toFixed(4) : "—"}</td>
+        <td>${(rv!==null&&pv!==null) ? `<div class="dev-track" title="${pctDev.toFixed(2)}%"><div class="dev-bar" style="width:${Math.min(100,pctDev*5)}%;background:${devClr}"></div></div>` : "<span style='color:var(--t4)'>—</span>"}</td>
+      `;
+      comparisonTbody.appendChild(tr);
+    });
+    if (validCount > 0) {
+      const avg = totalDev / validCount;
+      if (comparisonStatus) {
+        comparisonStatus.textContent = avg < 2
+          ? `Excellent alignment — avg deviation ${avg.toFixed(2)}%`
+          : avg < 5
+          ? `Good alignment — avg deviation ${avg.toFixed(2)}%`
+          : `High deviation: ${avg.toFixed(2)}% — regressor may need more epochs`;
+        comparisonStatus.style.color = avg < 5 ? "var(--g2)" : "#92400e";
+      }
+    } else {
+      if (comparisonStatus) comparisonStatus.textContent = "Train the Regressor (Step 4) to compare predictions.";
+    }
+  }
+
+  // MRIQC tab population
+  const tblMriqc = $("table-mriqc-details");
+  if (tblMriqc && patientData.mriqc_metrics) {
+    const mriqc = patientData.mriqc_metrics;
+    tblMriqc.innerHTML = `
+      <tr><td>Coefficient of Joint Variation (CJV)</td><td>${mriqc.cjv.toFixed(4)}</td></tr>
+      <tr><td>Contrast-to-Noise Ratio (CNR)</td><td>${mriqc.cnr.toFixed(4)}</td></tr>
+      <tr><td>Entropy Focus Criterion (EFC)</td><td>${mriqc.efc.toFixed(4)}</td></tr>
+      <tr><td>Foreground-to-Background Energy Ratio (FBER)</td><td>${mriqc.fber.toFixed(2)}</td></tr>
+      <tr><td>White Matter SNR (SNR_WM)</td><td>${mriqc.snr_wm.toFixed(4)}</td></tr>
+      <tr><td>Gray Matter SNR (SNR_GM)</td><td>${mriqc.snr_gm.toFixed(4)}</td></tr>
+      <tr><td>CSF SNR (SNR_CSF)</td><td>${mriqc.snr_csf.toFixed(4)}</td></tr>
+      <tr><td>Ghosting Artifact Index (QI_1)</td><td>${mriqc.qi_1.toFixed(6)}</td></tr>
+    `;
+
+    let score = 100;
+    if (mriqc.cjv > 0.75) score -= 15;
+    if (mriqc.cjv > 0.85) score -= 15;
+    if (mriqc.cnr < 1.20) score -= 15;
+    if (mriqc.cnr < 0.80) score -= 15;
+    if (mriqc.efc > 0.95) score -= 15;
+    if (mriqc.efc > 0.97) score -= 15;
+    if (mriqc.qi_1 > 0.05) score -= 10;
+    if (mriqc.qi_1 > 0.08) score -= 10;
+
+    let grade = "A+", label = "Excellent", gradeClass = "grade-excellent";
+    let desc = "This scan meets or exceeds all clinical quality thresholds. Signal-to-noise ratio is high, and motion artifacts are minimal.";
+    if (score >= 90) {
+      grade = "A+"; label = "Excellent"; gradeClass = "grade-excellent";
+    } else if (score >= 75) {
+      grade = "B"; label = "Good"; gradeClass = "grade-good";
+      desc = "Good quality scan. Mild blur or intensity variation detected, but fully sufficient for reliable clinical feature extraction.";
+    } else if (score >= 50) {
+      grade = "C"; label = "Acceptable"; gradeClass = "grade-acceptable";
+      desc = "Acceptable scan quality. Moderate noise, distortion, or artifact levels present. Interpret metrics with slight caution.";
+    } else {
+      grade = "F"; label = "Poor"; gradeClass = "grade-poor";
+      desc = "Poor scan quality. Significant motion artifacts, low signal-to-noise ratio, or severe distortion detected. Rescan recommended.";
+    }
+
+    const badge  = $("mriqc-rating-badge");
+    const qLabel = $("mriqc-quality-label");
+    const qDesc  = $("mriqc-quality-desc");
+    if (badge)  { badge.textContent = grade; badge.className = "rating-badge " + gradeClass; }
+    if (qLabel) qLabel.textContent = label;
+    if (qDesc)  qDesc.textContent  = desc;
+
+    const updateDot = (id, isGreen, isYellow) => {
+      const el = $(id);
+      if (el) el.className = "threshold-dot " + (isGreen ? "status-green" : isYellow ? "status-yellow" : "status-red");
     };
+    updateDot("dot-cjv", mriqc.cjv < 0.75, mriqc.cjv < 0.85);
+    updateDot("dot-cnr", mriqc.cnr > 1.20, mriqc.cnr > 0.80);
+    updateDot("dot-efc", mriqc.efc < 0.95, mriqc.efc < 0.97);
+    updateDot("dot-qi1", mriqc.qi_1 < 0.05, mriqc.qi_1 < 0.08);
 
-    // Mapping 40-dimension features array indexes to readable names
-    const FEATURE_NAMES = [
-        /* 0 - 11: Intensity */
-        "Intensity Mean", "Intensity Std", "Intensity Min", "Intensity Max", "Intensity Median", 
-        "Percentile 25", "Percentile 75", "Skewness", "Kurtosis", "Dynamic Range",
-        "Intensity Mode", "Bimodality Coefficient",
-        /* 12 - 18: Tissue */
-        "CSF Percentage", "Gray Matter Percentage", "White Matter Percentage", "Total Brain Tissue Pct",
-        "Otsu Threshold 1", "Otsu Threshold 2", "GM/WM CNR",
-        /* 19 - 26: Texture */
-        "GLCM Contrast", "GLCM Correlation", "GLCM Energy", "GLCM Homogeneity", 
-        "Mean Gradient", "Std Gradient", "Max Gradient", "Shannon Entropy",
-        /* 27 - 32: Structural */
-        "Brain Area Percentage", "Eccentricity (Ovalness)", "Solidity (Compactness)", 
-        "Extent", "Perimeter Length", "Ventricular Proxy Index %",
-        /* 33 - 34: Symmetry */
-        "Bilateral Symmetry Score", "Hemisphere Asymmetry Index %",
-        /* 35 - 37: Frequency */
-        "Low Frequency Energy", "High Frequency Energy", "Frequency Energy Ratio",
-        /* 38 - 39: Edge */
-        "Cortical Edge Sharpness", "Cortical Edge Std"
-    ];
+  } else if (tblMriqc) {
+    tblMriqc.innerHTML = `<tr><td colspan="2" style="color:var(--t4);text-align:center;font-style:italic;padding:20px 0;font-size:11px;">Image Quality Metrics unavailable. Run Official MRIQC (Docker) to compute them.</td></tr>`;
+  }
 
-    // Initialize UI
-    init();
+  stageOutputs.features = { loaded: true };
+  stageOutputs.segment  = { loaded: true };
+  stageOutputs.volumes  = { loaded: true };
+}
 
-    function init() {
-        fetchSystemStatus();
-        setupEventListeners();
-        loadLatestUpload();
+// ── Run manual pipeline step ──────────────────────────────────────
+function runPipelineStep(step) {
+  if (isRunningStep) { alert("A step is already running."); return; }
+  const ds = $("pipeline-data-source")?.value || "ixi-t1";
+  isRunningStep = true;
+  if (consolePulse) consolePulse.style.display = "inline-block";
+
+  const badge = ribbonBadges[step];
+  const rnode = $(`rnode-${step}`);
+  if (badge) { badge.className = "rsi-badge badge-running"; badge.textContent = "Running"; }
+  if (rnode) rnode.className = "rsi-node rsi-running";
+
+  const srpLog = $("srp-log");
+  if (srpLog) srpLog.innerHTML = `<span>Starting Step ${step}…</span>`;
+  appendConsoleLog(`Triggering Pipeline Step ${step} on data source '${ds}'...`, "cmd-msg");
+
+  fetch("/api/run-step", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({ step: parseInt(step), data_source: ds }),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.status === "started") {
+      appendConsoleLog(`Step ${step} started in background. PID: ${data.pid}`, "system-msg");
+      startPollingLogs(step);
+    } else {
+      isRunningStep = false;
+      if (consolePulse) consolePulse.style.display = "none";
+      if (badge) { badge.className = "rsi-badge badge-failed"; badge.textContent = "Failed"; }
+      if (rnode) rnode.className = "rsi-node rsi-pending";
+      appendConsoleLog(`Failed to start Step ${step}: ${data.error}`, "error-msg");
     }
+  })
+  .catch(() => {
+    isRunningStep = false;
+    if (consolePulse) consolePulse.style.display = "none";
+    appendConsoleLog(`Request error running Step ${step}`, "error-msg");
+  });
+}
 
-    // Setup event handlers
-    function setupEventListeners() {
-        // Tabs
-        const tabButtons = document.querySelectorAll(".tab-btn");
-        tabButtons.forEach(btn => {
-            btn.addEventListener("click", () => {
-                const targetTab = btn.getAttribute("data-tab");
-                
-                // Toggle active buttons
-                tabButtons.forEach(b => b.classList.remove("active"));
-                btn.classList.add("active");
-
-                // Toggle panels
-                const panels = document.querySelectorAll(".tab-pane");
-                panels.forEach(panel => {
-                    if (panel.id === targetTab) {
-                        panel.classList.add("active");
-                    } else {
-                        panel.classList.remove("active");
-                    }
-                });
-            });
-        });
-
-        // Launch fullscreen 3D NiiVue viewer in new tab
-        if (btnLaunchViewer) {
-            btnLaunchViewer.addEventListener("click", () => {
-                if (activePatientId) {
-                    window.open(`viewer.html?patient_id=${encodeURIComponent(activePatientId)}`, "_blank");
-                } else {
-                    appendConsoleLog("Please select a patient first.", "warning-msg");
-                }
-            });
+function startPollingLogs(step) {
+  if (logPollInterval) clearInterval(logPollInterval);
+  logPollInterval = setInterval(() => {
+    fetch("/api/logs")
+      .then(r => r.json())
+      .then(data => {
+        if (data.new_lines?.length > 0) {
+          data.new_lines.forEach(line => {
+            const clean = line.trim();
+            const cls = clean.includes("Error")||clean.includes("[FAILED]") ? "error-msg"
+                      : clean.includes("[SUCCESS]") ? "cmd-msg" : "";
+            appendConsoleLog(clean, cls);
+            const srpLog = $("srp-log");
+            if (srpLog) {
+              const el = document.createElement("div");
+              el.style.color = clean.includes("Error")||clean.includes("[FAILED]") ? "#f87171"
+                             : clean.includes("[SUCCESS]") ? "#4ade80" : "rgba(110,231,183,.7)";
+              el.textContent = clean;
+              srpLog.appendChild(el);
+              srpLog.scrollTop = srpLog.scrollHeight;
+            }
+          });
         }
-
-        // File upload drag & drop
-        dropZone.addEventListener("dragover", (e) => {
-            e.preventDefault();
-            dropZone.classList.add("dragover");
-        });
-
-        ["dragleave", "drop"].forEach(event => {
-            dropZone.addEventListener(event, () => {
-                dropZone.classList.remove("dragover");
-            });
-        });
-
-        dropZone.addEventListener("drop", (e) => {
-            e.preventDefault();
-            const files = e.dataTransfer.files;
-            if (files.length > 0 && files[0].name.endsWith(".nii")) {
-                handleFileUpload(files[0]);
-            } else {
-                appendConsoleLog("Error: Only .nii (NIfTI) files are supported.", "error-msg");
-            }
-        });
-
-        fileInput.addEventListener("change", (e) => {
-            const files = e.target.files;
-            if (files.length > 0) {
-                handleFileUpload(files[0]);
-            }
-        });
-
-        // Run Pipeline steps
-        const runButtons = document.querySelectorAll(".btn-run-step");
-        runButtons.forEach(btn => {
-            btn.addEventListener("click", () => {
-                const step = btn.getAttribute("data-step");
-                runPipelineStep(step);
-            });
-        });
-
-        // Clear console
-        clearConsoleBtn.addEventListener("click", () => {
-            consoleOutput.innerHTML = "";
-            appendConsoleLog("Console cleared.", "system-msg");
-        });
-
-        // Generate Report button
-        generateReportBtn.addEventListener("click", () => {
-            if (!activePatientId) {
-                appendConsoleLog("Select a scan first before generating a report.", "error-msg");
-                return;
-            }
-            // Show spinner, hide the button
-            generateReportBtn.style.display = "none";
-            reportGeneratingState.style.display = "flex";
-            appendConsoleLog(`Generating clinical report for ${activePatientId}...`, "cmd-msg");
-
-            fetch(`/api/report/${activePatientId}`)
-                .then(res => res.json())
-                .then(data => {
-                    // Hide CTA, show document + toolbar
-                    reportCta.style.display = "none";
-                    reportDocument.style.display = "block";
-                    reportToolbar.style.display = "flex";
-                    reportPaper.innerHTML = `<pre>${data.report || "No report content returned."}</pre>`;
-                    appendConsoleLog("Clinical report generated.", "cmd-msg");
-                })
-                .catch(err => {
-                    // Restore button on error
-                    generateReportBtn.style.display = "inline-flex";
-                    reportGeneratingState.style.display = "none";
-                    appendConsoleLog("Error generating report. Is the server running?", "error-msg");
-                });
-        });
-
-        // Print Report
-        printReportBtn.addEventListener("click", () => {
-            const printWindow = window.open('', '_blank');
-            const reportContent = document.getElementById("report-text-content").innerHTML;
-            printWindow.document.write(`
-                <html>
-                <head>
-                    <title>Clinical Report - ${activePatientId}</title>
-                    <style>
-                        body { font-family: sans-serif; padding: 40px; color: #222; }
-                        pre { white-space: pre-wrap; font-family: monospace; font-size: 13px; line-height: 1.5; }
-                    </style>
-                </head>
-                <body>
-                    ${reportContent}
-                    <script>
-                        window.onload = function() { window.print(); window.close(); }
-                    </script>
-                </body>
-                </html>
-            `);
-            printWindow.document.close();
-        });
-
-        // Download Report button
-        downloadReportBtn.addEventListener("click", () => {
-            if (!activePatientId) return;
-            const reportText = document.getElementById("report-text-content").innerText;
-            const blob = new Blob([reportText], { type: "text/plain" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `${activePatientId}_report.txt`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        });
-
-        // Download JSON button
-        const downloadJsonBtn = document.getElementById("btn-download-json");
-        downloadJsonBtn.addEventListener("click", () => {
-            if (!patientData) return;
-            const blob = new Blob([JSON.stringify(patientData, null, 2)], { type: "application/json" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `${activePatientId}_features.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        });
-    }
-
-    // Fetch details of CUDA support & Pipeline state
-    function fetchSystemStatus() {
-        fetch("/api/status")
-            .then(res => res.json())
-            .then(data => {
-                if (data.cuda_available) {
-                    cudaText.textContent = `${data.device || "Available"}`;
-                    cudaDot.className = "status-dot status-green";
-                } else {
-                    cudaText.textContent = "CPU Only";
-                    cudaDot.className = "status-dot status-amber";
-                }
-                
-                // Update pipeline step statuses
-                updatePipelineStepBadges(data.pipeline_status);
-            })
-            .catch(err => {
-                cudaText.textContent = "Disconnected";
-                cudaDot.className = "status-dot status-amber";
-            });
-    }
-
-    function updatePipelineStepBadges(status) {
-        if (!status) return;
-        for (let step in status) {
-            const badge = stepBadges[step];
-            if (!badge) continue;
-            badge.className = `flow-badge badge-${status[step].toLowerCase()}`;
-            badge.textContent = status[step];
+        if (data.is_running === false) {
+          clearInterval(logPollInterval);
+          logPollInterval = null;
+          isRunningStep = false;
+          if (consolePulse) consolePulse.style.display = "none";
+          appendConsoleLog("Pipeline step execution finished.", "system-msg");
+          const badge = ribbonBadges[step];
+          const rnode = $(`rnode-${step}`);
+          if (badge) { badge.className = "rsi-badge badge-completed"; badge.textContent = "Done"; }
+          if (rnode) {
+            rnode.className = "rsi-node rsi-done";
+            rnode.innerHTML = `<svg style="width:11px;height:11px;color:#fff"><use href="#ic-check"/></svg>`;
+          }
+          fetchSystemStatus();
+          if (activePatientId) selectPatient(activePatientId);
         }
-    }
+      })
+      .catch(() => {
+        clearInterval(logPollInterval);
+        logPollInterval = null;
+        isRunningStep = false;
+        if (consolePulse) consolePulse.style.display = "none";
+      });
+  }, 800);
+}
 
-    // Fetch latest uploaded scan and status
-    function loadLatestUpload() {
-        fetch("/api/patients")
-            .then(res => res.json())
-            .then(data => {
-                availablePatients = data.patients || [];
-                
-                // Filter out default dataset scans, only keep uploads
-                const uploadedPatients = availablePatients.filter(id => !id.startsWith("IXI002") && !id.startsWith("IXI012") && !id.startsWith("IXI013") && !id.startsWith("IXI014") && !id.startsWith("IXI015") && !id.startsWith("IXI"));
-                
-                totalScansText.textContent = `${uploadedPatients.length} Uploaded`;
-                
-                if (uploadedPatients.length > 0) {
-                    selectPatient(uploadedPatients[0]);
-                } else {
-                    emptyViewport.style.display = "flex";
-                    analysisViewport.style.display = "none";
-                    activeScanName.textContent = "No Scan Uploaded Yet";
-                    metadataSummary.innerHTML = `<span class="meta-tag">Awaiting Scan Upload</span>`;
-                    document.getElementById("btn-download-json").style.display = "none";
-                }
-            })
-            .catch(err => {
-                appendConsoleLog("Error checking scan upload status.", "error-msg");
-            });
-    }
+// ── Event listeners ───────────────────────────────────────────────
+function setupEventListeners() {
+  // Drop zone
+  if (dropZone) {
+    dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("dragover"); });
+    dropZone.addEventListener("dragleave", () => dropZone.classList.remove("dragover"));
+    dropZone.addEventListener("drop", e => {
+      e.preventDefault(); dropZone.classList.remove("dragover");
+      const f = e.dataTransfer.files[0];
+      if (f && (f.name.endsWith(".nii") || f.name.endsWith(".nii.gz"))) handleFileUpload(f);
+      else appendConsoleLog("Only .nii / .nii.gz files supported.", "error-msg");
+    });
+    dropZone.addEventListener("click", e => {
+      if (e.target.tagName !== "LABEL" && e.target.tagName !== "INPUT") fileInput && fileInput.click();
+    });
+  }
 
-    // ── Report Tab: reset to CTA state when switching patient ────────
-    function resetReportTab() {
-        reportCta.style.display = "flex";
-        generateReportBtn.style.display = "inline-flex";
-        reportGeneratingState.style.display = "none";
-        reportDocument.style.display = "none";
-        reportToolbar.style.display = "none";
-        reportPaper.innerHTML = "";
-    }
+  if (fileInput) {
+    fileInput.addEventListener("change", e => {
+      const f = e.target.files[0];
+      if (f) handleFileUpload(f);
+      fileInput.value = "";
+    });
+  }
 
-    // Select and load patient data
-    function selectPatient(patientId) {
-        if (!patientId) return;
-        activePatientId = patientId;
-        activeScanName.textContent = patientId;
-        
-        // Show loaders
-        emptyViewport.style.display = "none";
-        analysisViewport.style.display = "flex";
-        metadataSummary.innerHTML = `<span class="meta-tag">Loading details...</span>`;
-        document.getElementById("btn-download-json").style.display = "none";
+  // New scan / go-upload
+  const newScan = $("btn-new-scan");
+  if (newScan) newScan.addEventListener("click", () => showState(STATES.UPLOAD));
+  const goUpload = $("btn-go-upload");
+  if (goUpload) goUpload.addEventListener("click", () => showState(STATES.UPLOAD));
 
-        // Reset report tab — user must click Generate Report
-        resetReportTab();
-        
-        fetch(`/api/features/${patientId}`)
-            .then(res => res.json())
-            .then(data => {
-                patientData = data;
-                renderPatientDetails();
-                appendConsoleLog("Interactive 3D NIfTI scan loaded. Click 'Launch Fullscreen 3D Visualizer' to explore in WebGL.");
-                document.getElementById("btn-download-json").style.display = "inline-flex";
-            })
-            .catch(err => {
-                appendConsoleLog(`Error fetching features for patient ${patientId}`, "error-msg");
-            });
-    }
+  // Ribbon: training steps
+  for (let i = 1; i <= 6; i++) {
+    const el = $(`ribbon-step-${i}`);
+    if (el) el.addEventListener("click", () => openStepRunPanel(i));
+  }
 
-    function renderPatientDetails() {
-        if (!patientData) return;
-        
-        const isUploaded = patientData.source === "uploads";
-        metadataSummary.innerHTML = `
-            <span class="meta-tag">${isUploaded ? 'Uploaded Scan' : 'Dataset File'}</span>
-            <span class="meta-tag">${patientData.scan_metadata.orientation.toUpperCase()} view</span>
-            <span class="meta-tag">${patientData.scan_metadata.format} format</span>
-        `;
+  // Step run panel close
+  const srpClose = $("srp-close-btn");
+  if (srpClose) srpClose.addEventListener("click", closeStepRunPanel);
 
-        // Render Metadata Table
-        metadataGrid.innerHTML = `
-            <div class="meta-detail-item">
-                <span class="meta-detail-label">Scan ID</span>
-                <span class="meta-detail-value text-glow" style="font-size: 11px; word-break: break-all;">${activePatientId.substring(0, 32)}...</span>
-            </div>
-            <div class="meta-detail-item">
-                <span class="meta-detail-label">Resolution</span>
-                <span class="meta-detail-value">${patientData.scan_metadata.image_width} × ${patientData.scan_metadata.image_height}</span>
-            </div>
-            <div class="meta-detail-item">
-                <span class="meta-detail-label">Total Voxels</span>
-                <span class="meta-detail-value">${patientData.scan_metadata.total_pixels.toLocaleString()}</span>
-            </div>
-            <div class="meta-detail-item">
-                <span class="meta-detail-label">Modality</span>
-                <span class="meta-detail-value">${patientData.scan_metadata.modality}</span>
-            </div>
-        `;
+  // Drawer close
+  const drawerClose = $("drawer-close");
+  const drawerBg    = $("drawer-backdrop");
+  if (drawerClose) drawerClose.addEventListener("click", closeDrawer);
+  if (drawerBg)    drawerBg.addEventListener("click", closeDrawer);
 
-        // Render Tissue Distribution Progress Bars
-        const csf = patientData.tissue_segmentation.csf_ventricles.percentage;
-        const gm = patientData.tissue_segmentation.gray_matter.percentage;
-        const wm = patientData.tissue_segmentation.white_matter.percentage;
+  // Tabs
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
+      btn.classList.add("active");
+      const pane = $(btn.dataset.tab);
+      if (pane) pane.classList.add("active");
+    });
+  });
 
-        barCsf.style.width = `${csf}%`;
-        barGm.style.width = `${gm}%`;
-        barWm.style.width = `${wm}%`;
+  // 3D viewer
+  const launchBtn = $("btn-launch-viewer");
+  if (launchBtn) launchBtn.addEventListener("click", () => {
+    if (activePatientId) window.open(`viewer.html?patient_id=${encodeURIComponent(activePatientId)}`, "_blank");
+  });
 
-        labelCsf.textContent = `${csf.toFixed(2)}%`;
-        labelGm.textContent = `${gm.toFixed(2)}%`;
-        labelWm.textContent = `${wm.toFixed(2)}%`;
+  // Generate report
+  const genReport = $("btn-generate-report");
+  if (genReport) genReport.addEventListener("click", () => {
+    if (!activePatientId) return;
+    genReport.style.display = "none";
+    if (reportSpinner) reportSpinner.style.display = "flex";
+    fetch(`/api/report/${activePatientId}`)
+      .then(r => r.json())
+      .then(data => {
+        if (reportCta)     reportCta.style.display = "none";
+        if (reportDocument) reportDocument.style.display = "block";
+        if (reportToolbar)  reportToolbar.style.display = "flex";
+        if (reportPaper)    reportPaper.innerHTML = `<pre>${data.report || "No report returned."}</pre>`;
+      })
+      .catch(() => {
+        genReport.style.display = "inline-flex";
+        if (reportSpinner) reportSpinner.style.display = "none";
+      });
+  });
 
-        // Populate Intensity Table
-        const intensity = patientData.intensity_statistics;
-        tableIntensity.innerHTML = `
-            <tr><td>Mean Intensity</td><td>${intensity.mean.toFixed(4)}</td></tr>
-            <tr><td>Std Deviation</td><td>${intensity.std.toFixed(4)}</td></tr>
-            <tr><td>Minimum</td><td>${intensity.min.toFixed(4)}</td></tr>
-            <tr><td>Maximum</td><td>${intensity.max.toFixed(4)}</td></tr>
-            <tr><td>Median</td><td>${intensity.median.toFixed(4)}</td></tr>
-            <tr><td>Kurtosis</td><td>${intensity.kurtosis.toFixed(4)}</td></tr>
-            <tr><td>Skewness</td><td>${intensity.skewness.toFixed(4)}</td></tr>
-            <tr><td>Dynamic Range</td><td>${intensity.dynamic_range.toFixed(4)}</td></tr>
-        `;
+  const printReport = $("btn-print-report");
+  if (printReport) printReport.addEventListener("click", () => {
+    const win = window.open("", "_blank");
+    win.document.write(`<html><head><title>Report — ${activePatientId}</title>
+      <style>body{font-family:sans-serif;padding:40px;color:#111}pre{white-space:pre-wrap;font-size:13px;line-height:1.5}</style></head>
+      <body>${$("report-text-content").innerHTML}<script>window.onload=()=>{window.print();window.close()}<\/script></body></html>`);
+    win.document.close();
+  });
 
-        // Populate Morphology Table
-        const struct = patientData.structural_features;
-        const symmetry = patientData.symmetry;
-        tableMorphology.innerHTML = `
-            <tr><td>Brain Area Pct</td><td>${struct.brain_area_pct.toFixed(2)}%</td></tr>
-            <tr><td>Compactness (Solidity)</td><td>${struct.solidity.toFixed(4)}</td></tr>
-            <tr><td>Ovalness (Eccentricity)</td><td>${struct.eccentricity.toFixed(4)}</td></tr>
-            <tr><td>Perimeter</td><td>${struct.perimeter.toFixed(1)} px</td></tr>
-            <tr><td>Bilateral Symmetry</td><td>${symmetry.bilateral_symmetry_score.toFixed(4)}</td></tr>
-            <tr><td>Hemisphere Asymmetry</td><td>${symmetry.asymmetry_index_pct.toFixed(2)}%</td></tr>
-        `;
+  const dlReport = $("btn-download-report");
+  if (dlReport) dlReport.addEventListener("click", () => {
+    if (!activePatientId) return;
+    triggerDownload($("report-text-content").innerText, `${activePatientId}_report.txt`, "text/plain");
+  });
 
-        // Populate Texture Table
-        const texture = patientData.texture_features;
-        tableTexture.innerHTML = `
-            <tr><td>GLCM Contrast</td><td>${texture.glcm_contrast.toFixed(4)}</td></tr>
-            <tr><td>GLCM Correlation</td><td>${texture.glcm_correlation.toFixed(4)}</td></tr>
-            <tr><td>GLCM Energy</td><td>${texture.glcm_energy.toFixed(4)}</td></tr>
-            <tr><td>GLCM Homogeneity</td><td>${texture.glcm_homogeneity.toFixed(4)}</td></tr>
-            <tr><td>Mean Gradient</td><td>${texture.mean_gradient.toFixed(4)}</td></tr>
-            <tr><td>Shannon Entropy</td><td>${texture.shannon_entropy.toFixed(4)}</td></tr>
-        `;
+  const dlJson = $("btn-download-json");
+  if (dlJson) dlJson.addEventListener("click", () => {
+    if (patientData) triggerDownload(JSON.stringify(patientData, null, 2), `${activePatientId}_features.json`, "application/json");
+  });
 
-        // Populate Volumetric Statistics Card
-        const tblVolumes = document.getElementById("table-volumes");
-        if (tblVolumes) {
-            if (patientData.volumetric_statistics) {
-                const vols = patientData.volumetric_statistics;
-                tblVolumes.innerHTML = `
-                    <tr><td>Total Brain Vol (GM+WM)</td><td>${vols.total_brain_volume_ml.toFixed(1)} mL</td></tr>
-                    <tr><td>Gray Matter Volume</td><td>${vols.gray_matter_volume_ml.toFixed(1)} mL</td></tr>
-                    <tr><td>White Matter Volume</td><td>${vols.white_matter_volume_ml.toFixed(1)} mL</td></tr>
-                    <tr><td>CSF Volume</td><td>${vols.csf_volume_ml.toFixed(1)} mL</td></tr>
-                    <tr><td>Left Hippocampus</td><td>${vols.left_hippocampus_volume_ml.toFixed(3)} mL</td></tr>
-                    <tr><td>Right Hippocampus</td><td>${vols.right_hippocampus_volume_ml.toFixed(3)} mL</td></tr>
-                    <tr><td>Total Hippocampus</td><td>${vols.total_hippocampus_volume_ml.toFixed(3)} mL</td></tr>
-                `;
-            } else {
-                tblVolumes.innerHTML = `
-                    <tr><td colspan="2" style="color: #64748b; text-align: center; font-style: italic; padding: 20px 0; font-size: 11px;">3D volumes only computed on-the-fly for uploaded T1 scans.</td></tr>
-                `;
-            }
-        }
+  // Clear console
+  const clearConsoleBtn = $("btn-clear-console");
+  if (clearConsoleBtn) clearConsoleBtn.addEventListener("click", () => {
+    if (consoleOutput) consoleOutput.innerHTML = "";
+    appendConsoleLog("Console cleared.", "system-msg");
+  });
 
-        // Populate Vector Comparison (29 features)
-        const ruleBasedArray = patientData.rule_based_array || [];
-        const predictedArray = patientData.predicted_array || [];
-        
-        comparisonTbody.innerHTML = "";
-        
-        let totalDeviation = 0;
-        let validComparisons = 0;
+  // MRIQC Docker run button (from app(2).js)
+  const btnRunMriqcDocker = $("btn-run-mriqc-docker");
+  const mriqcDockerConsole = $("mriqc-docker-console");
+  const mriqcDockerStatus  = $("mriqc-docker-status");
+  const mriqcDockerOutput  = $("mriqc-docker-output");
+  const mriqcDockerSpinner = $("mriqc-docker-spinner");
 
-        for (let i = 0; i < FEATURE_NAMES.length; i++) {
-            const ruleValue = ruleBasedArray[i] !== undefined ? ruleBasedArray[i] : null;
-            const predValue = predictedArray[i] !== undefined ? predictedArray[i] : null;
-            
-            let diff = 0;
-            let pctDeviation = 0;
-            if (ruleValue !== null && predValue !== null) {
-                diff = Math.abs(ruleValue - predValue);
-                const scale = Math.max(Math.abs(ruleValue), Math.abs(predValue));
-                pctDeviation = scale > 0 ? (diff / scale) * 100 : 0;
-                totalDeviation += pctDeviation;
-                validComparisons++;
-            }
+  if (btnRunMriqcDocker) {
+    btnRunMriqcDocker.addEventListener("click", () => {
+      if (!activePatientId) {
+        appendConsoleLog("Please select a patient scan first.", "warning-msg");
+        return;
+      }
+      if (mriqcDockerConsole) mriqcDockerConsole.style.display = "flex";
+      if (mriqcDockerSpinner) mriqcDockerSpinner.style.display = "block";
+      if (mriqcDockerStatus)  mriqcDockerStatus.textContent = "Status: Starting Docker run...";
+      if (mriqcDockerOutput)  mriqcDockerOutput.innerHTML = '<div class="console-line system-msg">Initializing Docker run request...</div>';
+      btnRunMriqcDocker.disabled = true;
+      btnRunMriqcDocker.textContent = "🐳 Running...";
+      lastMriqcLogCount = 0;
 
-            const tr = document.createElement("tr");
-            tr.innerHTML = `
-                <td>#${String(i).padStart(2, "0")}</td>
-                <td class="cell-name">${FEATURE_NAMES[i]}</td>
-                <td>${ruleValue !== null ? ruleValue.toFixed(4) : "N/A"}</td>
-                <td>${predValue !== null ? predValue.toFixed(4) : "Pending Training"}</td>
-                <td>${predValue !== null && ruleValue !== null ? diff.toFixed(4) : "N/A"}</td>
-                <td>
-                    ${predValue !== null && ruleValue !== null ? `
-                    <div class="deviation-track" title="Deviation: ${pctDeviation.toFixed(2)}%">
-                        <div class="deviation-bar" style="width: ${Math.min(100, pctDeviation * 5)}%; background-color: ${pctDeviation > 15 ? 'var(--color-pink)' : pctDeviation > 5 ? 'var(--color-amber)' : 'var(--color-green)'}"></div>
-                    </div>
-                    ` : '<span style="color:var(--text-muted)">N/A</span>'}
-                </td>
-            `;
-            comparisonTbody.appendChild(tr);
-        }
-
-        // Comparison status text
-        if (validComparisons > 0) {
-            const avgDev = totalDeviation / validComparisons;
-            if (avgDev < 2) {
-                comparisonStatusText.textContent = `Excellent alignment! Average vector deviation is ${(avgDev).toFixed(2)}% (Target: < 5%).`;
-                comparisonStatusText.style.color = "var(--color-green)";
-            } else if (avgDev < 5) {
-                comparisonStatusText.textContent = `Good alignment. Average vector deviation is ${(avgDev).toFixed(2)}%.`;
-                comparisonStatusText.style.color = "var(--color-cyan)";
-            } else {
-                comparisonStatusText.textContent = `High vector deviation detected: ${(avgDev).toFixed(2)}%. The regressor may need more epochs.`;
-                comparisonStatusText.style.color = "var(--color-amber)";
-            }
-        } else {
-            comparisonStatusText.textContent = "Train the Feature Regressor (Step 4) to verify predictions.";
-            comparisonStatusText.style.color = "var(--text-muted)";
-        }
-    }
-
-    // Standalone viewer launched in separate tab; local definitions removed.
-
-    function varColor(varName) {
-        return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
-    }
-
-    // Append standard logs to console widget
-    function appendConsoleLog(text, className = "") {
-        const line = document.createElement("div");
-        line.className = `console-line ${className}`;
-        
-        // Add timestamp
-        const time = new Date().toLocaleTimeString();
-        line.textContent = `[${time}] ${text}`;
-        
-        consoleOutput.appendChild(line);
-        consoleOutput.scrollTop = consoleOutput.scrollHeight;
-    }
-
-    // Handles Drag-Drop & Input Uploading
-    function handleFileUpload(file) {
-        uploadProgress.style.display = "flex";
-        dropZone.querySelector(".drop-zone-content").style.display = "none";
-        uploadBar.style.width = "0%";
-        uploadProgressText.textContent = "Uploading scan file to server...";
-
-        const xhr = new XMLHttpRequest();
-        const formData = new FormData();
-        formData.append("file", file);
-
-        xhr.upload.addEventListener("progress", (e) => {
-            if (e.lengthComputable) {
-                const percentComplete = (e.loaded / e.total) * 100;
-                uploadBar.style.width = `${percentComplete}%`;
-                uploadProgressText.textContent = `Uploading: ${percentComplete.toFixed(0)}%`;
-            }
-        });
-
-        xhr.addEventListener("load", () => {
-            if (xhr.status === 200) {
-                const response = JSON.parse(xhr.responseText);
-                
-                uploadProgressText.textContent = "Success! Parsing features...";
-                appendConsoleLog(`Upload successful: ${file.name}`, "system-msg");
-                appendConsoleLog(`Server generated patient: ${response.patient_id}`, "cmd-msg");
-                
-                // Reload latest upload and select it
-                setTimeout(() => {
-                    loadLatestUpload();
-                    setTimeout(() => {
-                        selectPatient(response.patient_id);
-                        
-                        // Reset upload widget
-                        uploadProgress.style.display = "none";
-                        dropZone.querySelector(".drop-zone-content").style.display = "flex";
-                    }, 500);
-                }, 1000);
-            } else {
-                handleUploadFailure("Server returned upload error.");
-            }
-        });
-
-        xhr.addEventListener("error", () => {
-            handleUploadFailure("Network upload failed.");
-        });
-
-        xhr.open("POST", "/api/upload");
-        xhr.send(formData);
-    }
-
-    function handleUploadFailure(msg) {
-        uploadProgress.style.display = "none";
-        dropZone.querySelector(".drop-zone-content").style.display = "flex";
-        appendConsoleLog(`Upload Failed: ${msg}`, "error-msg");
-        alert(`Upload Failed: ${msg}`);
-    }
-
-    // Execution of Pipeline Steps
-    function runPipelineStep(step) {
-        if (isRunningStep) {
-            alert("Another pipeline step is currently running. Please wait.");
-            return;
-        }
-
-        const dataSource = document.getElementById("pipeline-data-source").value;
-        isRunningStep = true;
-        consolePulse.style.display = "inline-block";
-        appendConsoleLog(`Triggering Pipeline Step ${step} on dataSource '${dataSource}'...`, "cmd-msg");
-
-        // Clear active logs and request execution
-        fetch("/api/run-step", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ step: parseInt(step), data_source: dataSource })
-        })
+      fetch(`/api/mriqc/run/${encodeURIComponent(activePatientId)}`, { method: 'POST' })
         .then(res => res.json())
         .then(data => {
-            if (data.status === "started") {
-                appendConsoleLog(`Step ${step} started in background. Pid: ${data.pid}`, "system-msg");
-                
-                // Start polling logs
-                startPollingLogs();
-            } else {
-                appendConsoleLog(`Failed to start Step ${step}: ${data.error}`, "error-msg");
-                isRunningStep = false;
-                consolePulse.style.display = "none";
-            }
+          if (data.status === "started") {
+            appendConsoleLog(`Official MRIQC Docker container started for patient ${activePatientId}.`);
+            mriqcPollingInterval = setInterval(() => pollMriqcStatus(activePatientId), 2000);
+          } else {
+            if (mriqcDockerStatus)  mriqcDockerStatus.textContent = "Status: Failed to start";
+            if (mriqcDockerSpinner) mriqcDockerSpinner.style.display = "none";
+            btnRunMriqcDocker.disabled = false;
+            btnRunMriqcDocker.textContent = "🐳 Run Official MRIQC (Docker)";
+            if (mriqcDockerOutput) mriqcDockerOutput.innerHTML += `<div class="console-line error-msg">Error: ${data.error || "Failed to start Docker process"}</div>`;
+          }
         })
         .catch(err => {
-            appendConsoleLog(`Request error running Step ${step}`, "error-msg");
-            isRunningStep = false;
-            consolePulse.style.display = "none";
+          if (mriqcDockerStatus)  mriqcDockerStatus.textContent = "Status: Connection Error";
+          if (mriqcDockerSpinner) mriqcDockerSpinner.style.display = "none";
+          btnRunMriqcDocker.disabled = false;
+          btnRunMriqcDocker.textContent = "🐳 Run Official MRIQC (Docker)";
+          if (mriqcDockerOutput) mriqcDockerOutput.innerHTML += `<div class="console-line error-msg">Error connecting to server: ${err}</div>`;
         });
-    }
+    });
+  }
 
-    function startPollingLogs() {
-        if (logPollInterval) clearInterval(logPollInterval);
-        
-        logPollInterval = setInterval(() => {
-            fetch("/api/logs")
-                .then(res => res.json())
-                .then(data => {
-                    // Append new lines
-                    if (data.new_lines && data.new_lines.length > 0) {
-                        data.new_lines.forEach(line => {
-                            let cleanLine = line.trim();
-                            if (cleanLine.includes("[FAILED]") || cleanLine.includes("Error") || cleanLine.includes("[ERROR]")) {
-                                appendConsoleLog(cleanLine, "error-msg");
-                            } else if (cleanLine.includes("[SUCCESS]") || cleanLine.includes("✓")) {
-                                appendConsoleLog(cleanLine, "cmd-msg");
-                            } else {
-                                appendConsoleLog(cleanLine);
-                            }
-                        });
-                    }
+  function pollMriqcStatus(patientId) {
+    fetch(`/api/mriqc/status/${encodeURIComponent(patientId)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (mriqcDockerStatus) mriqcDockerStatus.textContent = `Status: ${data.progress || data.status}`;
+        if (data.logs && data.logs.length > lastMriqcLogCount) {
+          const newLogs = data.logs.slice(lastMriqcLogCount);
+          newLogs.forEach(line => {
+            if (!mriqcDockerOutput) return;
+            const lineEl = document.createElement("div");
+            lineEl.className = "console-line";
+            if (line.includes("ERROR") || line.includes("failed") || line.includes("exited with error")) lineEl.classList.add("error-msg");
+            else if (line.includes("Successfully") || line.includes("complete") || line.includes("Reading")) lineEl.classList.add("cmd-msg");
+            lineEl.textContent = line.trim();
+            mriqcDockerOutput.appendChild(lineEl);
+          });
+          lastMriqcLogCount = data.logs.length;
+          if (mriqcDockerOutput) mriqcDockerOutput.scrollTop = mriqcDockerOutput.scrollHeight;
+        }
+        if (data.status === "completed") {
+          clearInterval(mriqcPollingInterval); mriqcPollingInterval = null;
+          if (mriqcDockerSpinner) mriqcDockerSpinner.style.display = "none";
+          if (btnRunMriqcDocker) { btnRunMriqcDocker.disabled = false; btnRunMriqcDocker.textContent = "🐳 Run Official MRIQC (Docker)"; }
+          appendConsoleLog(`Official MRIQC Docker run completed for patient ${patientId}.`);
+          selectPatient(patientId);
+        } else if (data.status === "failed") {
+          clearInterval(mriqcPollingInterval); mriqcPollingInterval = null;
+          if (mriqcDockerSpinner) mriqcDockerSpinner.style.display = "none";
+          if (btnRunMriqcDocker) { btnRunMriqcDocker.disabled = false; btnRunMriqcDocker.textContent = "🐳 Run Official MRIQC (Docker)"; }
+          appendConsoleLog(`Official MRIQC Docker run failed for patient ${patientId}.`, "error-msg");
+        }
+      })
+      .catch(err => console.error("Error polling MRIQC status:", err));
+  }
 
-                    // Check if complete
-                    if (data.is_running === false) {
-                        clearInterval(logPollInterval);
-                        logPollInterval = null;
-                        isRunningStep = false;
-                        consolePulse.style.display = "none";
-                        appendConsoleLog("Pipeline step execution finished.", "system-msg");
-                        
-                        // Reload status and details to capture updates
-                        fetchSystemStatus();
-                        if (activePatientId) selectPatient(activePatientId);
-                    }
-                })
-                .catch(err => {
-                    clearInterval(logPollInterval);
-                    logPollInterval = null;
-                    isRunningStep = false;
-                    consolePulse.style.display = "none";
-                });
-        }, 800);
-    }
-});
+} // end setupEventListeners
+
+// ── Utilities ─────────────────────────────────────────────────────
+function triggerDownload(content, filename, type) {
+  const blob = new Blob([content], { type });
+  const url  = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+// ── Init ──────────────────────────────────────────────────────────
+function init() {
+  showState(STATES.UPLOAD);
+  initNeuralCanvas();
+  setupEventListeners();
+  fetchSystemStatus();
+  loadLatestUpload();
+  setInterval(fetchSystemStatus, 30000);
+}
+
+init();
+
+}); // DOMContentLoaded

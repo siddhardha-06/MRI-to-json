@@ -13,6 +13,7 @@ import time
 import urllib.parse
 import webbrowser
 import torch
+import shutil
 
 # Core imports for on-the-fly feature extraction
 import numpy as np
@@ -35,6 +36,201 @@ REPORTS_DIR = os.path.join(WORKSPACE_DIR, 'reports')
 active_process = None
 active_logs = []
 is_running = False
+
+# MRIQC Docker job tracking
+mriqc_jobs = {}
+
+# Quality gate thresholds
+MRIQC_THRESHOLDS = {
+    "cjv":   {"optimal": 0.75,  "acceptable": 0.85,  "lower_is_better": True},
+    "cnr":   {"optimal": 1.20,  "acceptable": 0.80,  "lower_is_better": False},
+    "efc":   {"optimal": 0.95,  "acceptable": 0.97,  "lower_is_better": True},
+    "qi_1":  {"optimal": 0.05,  "acceptable": 0.08,  "lower_is_better": True},
+}
+
+def simulate_mriqc_from_vector(vector: list) -> dict:
+    """Compute realistic MRIQC metrics from the 40-element rule-based feature vector.
+    Deterministic simulation — identical to train_regressor(2).py simulate_mriqc_metrics_from_vector."""
+    if not vector or len(vector) < 40:
+        vector = list(vector or []) + [0.0] * (40 - len(vector or []))
+    mean_val  = float(vector[0])
+    std_val   = float(vector[1])
+    cnr_val   = float(vector[18])
+    entropy   = float(vector[26])
+    area_pct  = float(vector[27])
+
+    cjv  = np.clip(0.32 + (std_val / (mean_val + 1e-5)) * 0.15, 0.25, 0.65)
+    cnr  = np.clip(cnr_val if cnr_val > 0 else 1.85, 0.5, 4.0)
+    efc  = np.clip(0.65 + (entropy / 5.0) * 0.2, 0.55, 0.92)
+    fber = np.clip(25.0 + (area_pct * 3.5) + (mean_val / (std_val + 1e-5)) * 10.0, 12.0, 850.0)
+    snr_base = mean_val / (std_val + 1e-5)
+    snr_wm   = np.clip(9.5  + snr_base * 1.5, 8.0,  14.5)
+    snr_gm   = np.clip(7.5  + snr_base * 1.0, 6.0,  11.5)
+    snr_csf  = np.clip(2.5  + snr_base * 0.3, 1.2,  4.5)
+    qi_1     = np.clip(0.004 + (1.0 - (cnr / 4.0)) * 0.015, 0.0001, 0.04)
+
+    return {
+        "cjv":     round(float(cjv),  4),
+        "cnr":     round(float(cnr),  4),
+        "efc":     round(float(efc),  4),
+        "fber":    round(float(fber), 2),
+        "snr_wm":  round(float(snr_wm),  4),
+        "snr_gm":  round(float(snr_gm),  4),
+        "snr_csf": round(float(snr_csf), 4),
+        "qi_1":    round(float(qi_1), 6),
+        "simulated": True,  # flag so UI can show "simulated" badge
+    }
+
+def compute_mriqc_quality_score(metrics: dict) -> dict:
+    """Score scan quality from MRIQC metrics. Returns score (0-100), grade, label, pass/fail."""
+    score = 100
+    if metrics.get("cjv",  0) > 0.75: score -= 15
+    if metrics.get("cjv",  0) > 0.85: score -= 15
+    if metrics.get("cnr",  0) < 1.20: score -= 15
+    if metrics.get("cnr",  0) < 0.80: score -= 15
+    if metrics.get("efc",  0) > 0.95: score -= 15
+    if metrics.get("efc",  0) > 0.97: score -= 15
+    if metrics.get("qi_1", 0) > 0.05: score -= 10
+    if metrics.get("qi_1", 0) > 0.08: score -= 10
+    score = max(0, score)
+
+    if score >= 90:
+        grade, label, passed = "A+", "Excellent", True
+        reason = "All IQMs within optimal clinical thresholds. Scan approved."
+    elif score >= 75:
+        grade, label, passed = "B", "Good", True
+        reason = "Minor deviations detected but within acceptable range. Scan approved."
+    elif score >= 50:
+        grade, label, passed = "C", "Acceptable", True
+        reason = "Moderate quality — metrics are marginal but acceptable. Proceed with caution."
+    else:
+        grade, label, passed = "F", "Poor", False
+        reason = "Scan quality below minimum threshold. High motion/noise artifacts detected. Rescan recommended."
+
+    return {"score": score, "grade": grade, "label": label, "passed": passed, "reason": reason}
+
+
+def run_official_mriqc_thread(patient_id, mri_path):
+    global mriqc_jobs
+    job = mriqc_jobs.setdefault(patient_id, {"status": "idle", "logs": [], "progress": ""})
+    job["status"] = "running"
+    job["progress"] = "Preparing BIDS directory..."
+    job["logs"] = ["Initializing official MRIQC pipeline...\n"]
+
+    bids_temp_dir = os.path.join(WORKSPACE_DIR, "uploads", "bids_temp")
+    bids_out_dir = os.path.join(WORKSPACE_DIR, "uploads", "bids_out")
+
+    bids_id = "".join(c for c in patient_id if c.isalnum())
+    sub_anat_dir = os.path.join(bids_temp_dir, f"sub-{bids_id}", "anat")
+
+    try:
+        if os.path.exists(sub_anat_dir):
+            try:
+                shutil.rmtree(sub_anat_dir)
+            except Exception:
+                pass
+        os.makedirs(sub_anat_dir, exist_ok=True)
+        os.makedirs(bids_out_dir, exist_ok=True)
+
+        desc_file = os.path.join(bids_temp_dir, "dataset_description.json")
+        with open(desc_file, 'w') as df:
+            json.dump({"Name": "NeuroSphere Dataset", "BIDSVersion": "1.8.0"}, df)
+
+        dest_nii_path = os.path.join(sub_anat_dir, f"sub-{bids_id}_T1w.nii")
+        job["logs"].append(f"Copying scan to BIDS layout: {dest_nii_path}\n")
+        shutil.copy2(mri_path, dest_nii_path)
+    except Exception as e:
+        job["status"] = "failed"
+        job["logs"].append(f"BIDS directory setup failed: {str(e)}\n")
+        return
+
+    abs_temp_dir = os.path.abspath(bids_temp_dir).replace('\\', '/')
+    abs_out_dir = os.path.abspath(bids_out_dir).replace('\\', '/')
+
+    try:
+        # Check if docker is available in PATH
+        docker_cmd = "docker"
+        docker_check = subprocess.run(f"{docker_cmd} --version", shell=True, capture_output=True)
+        
+        # If not in PATH, try the default Docker Desktop Windows installation path
+        if docker_check.returncode != 0:
+            docker_cmd = r'"C:\Program Files\Docker\Docker\resources\bin\docker.exe"'
+            docker_check = subprocess.run(f"{docker_cmd} --version", shell=True, capture_output=True)
+            
+            if docker_check.returncode != 0:
+                raise FileNotFoundError("Docker not found")
+
+        cmd = f'{docker_cmd} run --rm -v "{abs_temp_dir}:/data:ro" -v "{abs_out_dir}:/out" nipreps/mriqc:latest /data /out participant --participant-label {bids_id} --no-sub'
+        job["logs"].append(f"Executing: {cmd}\n")
+        job["progress"] = "Running MRIQC Docker container..."
+
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+
+        while True:
+            line = proc.stdout.readline()
+            if not line:
+                break
+            decoded = line.decode('utf-8', errors='ignore')
+            job["logs"].append(decoded)
+
+        proc.wait()
+
+        if proc.returncode != 0:
+            job["status"] = "failed"
+            job["logs"].append(f"Docker process exited with error code {proc.returncode}\n")
+            return
+
+        expected_json = os.path.join(bids_out_dir, f"sub-{bids_id}", "anat", f"sub-{bids_id}_T1w.json")
+        if not os.path.exists(expected_json):
+            job["status"] = "failed"
+            job["logs"].append(f"MRIQC completed but output JSON was not found at {expected_json}\n")
+            return
+
+        job["logs"].append(f"Reading generated MRIQC JSON file...\n")
+        with open(expected_json, 'r') as fh:
+            mriqc_data = json.load(fh)
+
+        parsed_metrics = {
+            "cjv":     float(mriqc_data.get("cjv",     0.0) or 0.0),
+            "cnr":     float(mriqc_data.get("cnr",     0.0) or 0.0),
+            "efc":     float(mriqc_data.get("efc",     0.0) or 0.0),
+            "fber":    float(mriqc_data.get("fber",    0.0) or 0.0),
+            "snr_wm":  float(mriqc_data.get("snr_wm",  0.0) or 0.0),
+            "snr_gm":  float(mriqc_data.get("snr_gm",  0.0) or 0.0),
+            "snr_csf": float(mriqc_data.get("snr_csf", 0.0) or 0.0),
+            "qi_1":    float(mriqc_data.get("qi_1",    0.0) or 0.0)
+        }
+
+        # Save to features cache
+        patient_cache_file = os.path.join(UPLOADS_DIR, patient_id, "features.json")
+        if os.path.exists(patient_cache_file):
+            with open(patient_cache_file, 'r') as f:
+                feat_dict = json.load(f)
+            feat_dict["mriqc_metrics"] = parsed_metrics
+            with open(patient_cache_file, 'w') as f:
+                json.dump(feat_dict, f, indent=2)
+            job["logs"].append("Successfully updated local features.json cache.\n")
+        elif os.path.exists(FEATURES_FILE):
+            with open(FEATURES_FILE, 'r') as f:
+                all_pred = json.load(f)
+            if patient_id in all_pred:
+                all_pred[patient_id]["mriqc_metrics"] = parsed_metrics
+                with open(FEATURES_FILE, 'w') as f:
+                    json.dump(all_pred, f, indent=2)
+                job["logs"].append("Successfully updated predicted_features.json.\n")
+
+        job["status"] = "completed"
+        job["progress"] = "Official MRIQC complete!"
+
+    except FileNotFoundError:
+        # Docker not installed — explicitly fail so quality gate catches it
+        job["logs"].append("[ERROR] Docker not found on system. MRIQC requires Docker to run.\n")
+        job["status"] = "failed"
+        job["progress"] = "Docker not found"
+    except Exception as e:
+        job["status"] = "failed"
+        job["logs"].append(f"Error during MRIQC run: {str(e)}\n")
+
 
 # Ensure dirs exist
 os.makedirs(UPLOADS_DIR, exist_ok=True)
@@ -233,7 +429,8 @@ def run_feature_extraction(mri_path: str):
             "max_row": bbox_max_row,
             "max_col": bbox_max_col
         },
-        "volumetric_statistics": volumetric_stats
+        "volumetric_statistics": volumetric_stats,
+        "mriqc_metrics": None
     }
 
 
@@ -433,6 +630,12 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
         elif path.startswith('/api/report/'):
             patient_id = path.split('/api/report/')[1]
             self.handle_api_report(patient_id)
+        elif path.startswith('/api/mriqc/status/'):
+            patient_id = path.split('/api/mriqc/status/')[1]
+            self.handle_api_mriqc_status(urllib.parse.unquote(patient_id))
+        elif path.startswith('/api/mriqc/quality-gate/'):
+            patient_id = path.split('/api/mriqc/quality-gate/')[1]
+            self.handle_api_mriqc_quality_gate(urllib.parse.unquote(patient_id))
         elif path == '/api/logs':
             self.handle_api_logs(parsed_url.query)
         elif path.startswith('/uploads/') or path.startswith('/ixi-t1/') or path.startswith('/ixi-t1-masks/'):
@@ -474,6 +677,9 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
             self.handle_api_upload()
         elif path == '/api/run-step':
             self.handle_api_run_step()
+        elif path.startswith('/api/mriqc/run/'):
+            patient_id = path.split('/api/mriqc/run/')[1]
+            self.handle_api_mriqc_run(urllib.parse.unquote(patient_id))
         else:
             self.send_error(404, "Endpoint not found")
 
@@ -501,7 +707,7 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
     # API: List patient IDs (precomputed + uploaded)
     def handle_api_patients(self):
         patients = []
-        
+
         # 1. Load precomputed from predicted_features.json
         if os.path.exists(FEATURES_FILE):
             try:
@@ -516,14 +722,14 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
                         patients.extend(list(data.keys()))
             except Exception as e:
                 print("Error loading features keys:", e)
-                
+
         # 2. Add uploaded patients
         uploaded_scans = sorted(pathlib.Path(UPLOADS_DIR).glob("*/*.nii"))
         for scan in uploaded_scans:
             scan_id = scan.parent.name
             if scan_id not in patients:
-                patients.insert(0, scan_id) # Put uploaded scans first
-                
+                patients.insert(0, scan_id)  # Put uploaded scans first
+
         self.send_json_response({"patients": patients})
 
     # API: Load patient quantitative metrics (and compares vectors)
@@ -571,9 +777,13 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
                     feature_data["structural_features"]["bounding_box"] = extraction_results["bbox"]
                     
                     # Add volumetric statistics if available
-                    if "volumetric_statistics" in extraction_results and extraction_results["volumetric_statistics"] is not None:
+                    if extraction_results.get("volumetric_statistics") is not None:
                         feature_data["volumetric_statistics"] = extraction_results["volumetric_statistics"]
-                    
+
+                    # Add MRIQC metrics if available
+                    if extraction_results.get("mriqc_metrics") is not None:
+                        feature_data["mriqc_metrics"] = extraction_results["mriqc_metrics"]
+
                     # Cache it
                     cache_payload = feature_data.copy()
                     cache_payload["rule_based_array"] = rule_based_vector
@@ -721,6 +931,67 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
 
         self.send_json_response({"report": report_content})
 
+    # API: MRIQC Docker job status
+    def handle_api_mriqc_status(self, patient_id):
+        job = mriqc_jobs.get(patient_id, {"status": "idle", "logs": [], "progress": ""})
+        self.send_json_response(job)
+
+    # API: Quality gate check — returns pass/fail based on stored MRIQC metrics
+    def handle_api_mriqc_quality_gate(self, patient_id):
+        metrics = None
+
+        # 1. Check upload cache for mriqc_metrics
+        cache_file = os.path.join(UPLOADS_DIR, patient_id, "features.json")
+        if os.path.exists(cache_file):
+            try:
+                with open(cache_file, 'r') as f:
+                    cached = json.load(f)
+                metrics = cached.get("mriqc_metrics")
+
+                # We removed the immediate simulation here.
+                # If metrics are not available, it means Docker MRIQC hasn't run or failed.
+            except Exception as e:
+                print(f"Quality gate check error: {e}")
+
+        if not metrics:
+            self.send_json_response({
+                "passed": False,
+                "grade": "F",
+                "label": "Failed",
+                "score": 0,
+                "reason": "MRIQC failed to run (Docker is likely not installed or encountered an error).",
+                "metrics": None
+            })
+            return
+
+        quality = compute_mriqc_quality_score(metrics)
+        quality["metrics"] = metrics
+        self.send_json_response(quality)
+
+    # API: Start official MRIQC Docker run in background thread
+    def handle_api_mriqc_run(self, patient_id):
+        mri_path = None
+        # 1. Check uploads folder
+        upload_file = os.path.join(UPLOADS_DIR, patient_id, f"{patient_id}.nii")
+        if os.path.exists(upload_file):
+            mri_path = upload_file
+        # 2. Check dataset folder
+        if not mri_path:
+            dataset_dir = os.path.join(WORKSPACE_DIR, "ixi-t1")
+            prefix = "-".join(patient_id.split("-")[:3])
+            mri_files = list(pathlib.Path(dataset_dir).rglob("*.nii"))
+            for f in mri_files:
+                if f.is_file() and f.name.startswith(prefix):
+                    mri_path = str(f)
+                    break
+        if not mri_path:
+            self.send_json_response({"status": "error", "error": f"MRI scan file not found for patient {patient_id}."})
+            return
+        t = threading.Thread(target=run_official_mriqc_thread, args=(patient_id, mri_path))
+        t.daemon = True
+        t.start()
+        self.send_json_response({"status": "started"})
+
     # API: Streams pipeline logs
     def handle_api_logs(self, query):
         global active_logs, is_running
@@ -813,10 +1084,10 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
             )
             feature_data["structural_features"]["centroid"] = extraction_results["centroid"]
             feature_data["structural_features"]["bounding_box"] = extraction_results["bbox"]
-            if "volumetric_statistics" in extraction_results and extraction_results["volumetric_statistics"] is not None:
+            if extraction_results.get("volumetric_statistics") is not None:
                 feature_data["volumetric_statistics"] = extraction_results["volumetric_statistics"]
-                
-            # Cache payload
+
+            # Cache payload (without MRIQC metrics)
             cache_payload = feature_data.copy()
             cache_payload["rule_based_array"] = rule_based_vector
             cache_file = os.path.join(dest_dir, "features.json")
@@ -828,7 +1099,13 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
             self.send_json_response({
                 "status": "success",
                 "patient_id": scan_id,
-                "path": f"uploads/{scan_id}/{scan_id}.nii"
+                "path": f"uploads/{scan_id}/{scan_id}.nii",
+                "mriqc_passed": False,
+                "mriqc_grade":  "?",
+                "mriqc_label":  "Pending",
+                "mriqc_score":  0,
+                "mriqc_reason": "Pending MRIQC execution.",
+                "mriqc_metrics": None,
             })
             
         except Exception as e:
@@ -907,12 +1184,26 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
 
     # Utilities
     def send_json_response(self, data):
-        response_bytes = json.dumps(data).encode('utf-8')
+        sanitized = sanitize_nan(data)
+        response_bytes = json.dumps(sanitized).encode('utf-8')
         self.send_response(200)
         self.send_header('Content-Type', 'application/json')
         self.send_header('Content-Length', len(response_bytes))
         self.end_headers()
         self.wfile.write(response_bytes)
+
+
+def sanitize_nan(data):
+    """Recursively replace NaN/Inf floats with None so JSON serialization never fails."""
+    import math
+    if isinstance(data, dict):
+        return {k: sanitize_nan(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [sanitize_nan(v) for v in data]
+    elif isinstance(data, float):
+        if math.isnan(data) or math.isinf(data):
+            return None
+    return data
 
 
 # =============================================================================
