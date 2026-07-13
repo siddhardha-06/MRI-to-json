@@ -913,6 +913,37 @@ function renderPatientDetails() {
     updateDot("dot-efc", mriqc.efc < 0.95, mriqc.efc < 0.97);
     updateDot("dot-qi1", mriqc.qi_1 < 0.05, mriqc.qi_1 < 0.08);
 
+    // --- Confidence Score (0–100%) ---
+    // Each metric contributes an independent normalised score:
+    //   CJV   : ideal = 0.35, worst = 1.0  → higher cjv = lower conf
+    //   CNR   : ideal = 2.5,  worst = 0    → higher cnr = higher conf
+    //   EFC   : ideal = 0.40, worst = 1.0  → higher efc = lower conf
+    //   QI_1  : ideal = 0.00, worst = 0.10 → higher qi1 = lower conf
+    const confCjv  = Math.max(0, Math.min(1, (1.0  - mriqc.cjv)  / (1.0  - 0.35))) * 100;
+    const confCnr  = Math.max(0, Math.min(1, mriqc.cnr            / 2.5))           * 100;
+    const confEfc  = Math.max(0, Math.min(1, (1.0  - mriqc.efc)  / (1.0  - 0.40))) * 100;
+    const confQi1  = Math.max(0, Math.min(1, (0.10 - mriqc.qi_1) / 0.10))          * 100;
+    const confScore = Math.round((confCjv + confCnr + confEfc + confQi1) / 4);
+
+    // Update gauge text
+    const confValEl = $("confidence-score-value");
+    if (confValEl) confValEl.textContent = confScore + "%";
+
+    // Animate SVG ring: circumference = 2π × 33 ≈ 207.3
+    const circumference = 207.3;
+    const offset = circumference - (confScore / 100) * circumference;
+    const ring = $("confidence-gauge-ring");
+    if (ring) {
+        // Colour based on score
+        let ringColor = "#10b981"; // green
+        if (confScore < 60) ringColor = "#ec4899";      // pink/red
+        else if (confScore < 75) ringColor = "#f59e0b"; // amber
+        else if (confScore < 90) ringColor = "#06b6d4"; // cyan
+        ring.style.stroke = ringColor;
+        ring.style.strokeDashoffset = offset;
+        ring.style.transition = "stroke-dashoffset 1.2s ease, stroke 0.4s ease";
+    }
+
   } else if (tblMriqc) {
     tblMriqc.innerHTML = `<tr><td colspan="2" style="color:var(--t4);text-align:center;font-style:italic;padding:20px 0;font-size:11px;">Image Quality Metrics unavailable. Run Official MRIQC (Docker) to compute them.</td></tr>`;
   }

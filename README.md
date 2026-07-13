@@ -139,6 +139,18 @@ This will automatically launch the dashboard in your default browser at **`http:
 *   **Overlay segmentations**: Toggle U-Net tissue segmentations (CSF, GM, WM) directly on top of the raw scan.
 *   **Dynamic Feature Extraction**: Drag and drop any new `.nii` file to segment it, calculate its 29 structural features, and view them immediately.
 *   **Clinical Summary**: Read the Gemini-generated medical report side-by-side with the brain model.
+*   **Official MRIQC Validation (Docker)**: Validate scan quality with official MRIQC clinical metrics by running their containerized pipeline directly from the dashboard toolbar (requires Docker Desktop).
+
+### 🐳 Official MRIQC Integration (via Docker)
+
+To guarantee exact compliance with clinical literature, the dashboard features a **Docker-backed MRIQC runner** alongside our fast, built-in mathematical emulator:
+
+1. **Fast Emulator (Fallback)**: Native Python emulation executes in **~2 seconds**, checking contrast-to-noise ratio (CNR), coefficient of joint variation (CJV), and entropy focus criterion (EFC) dynamically.
+2. **Official MRIQC Mode**: Click **"Run Official MRIQC (Docker)"** to spin up the official containerized tool (`nipreps/mriqc:23.1.0`).
+   * **System requirement**: Ensure **Docker Desktop** is open and running on your system.
+   * **Auto-bids structure**: The server converts NIfTI paths to a temporary BIDS format (`sub-<id>/anat/sub-<id>_T1w.nii`) and writes a `dataset_description.json` config automatically.
+   * **Logs streaming**: View the live terminal logs directly on the dashboard tab.
+   * **Auto-import**: Once MRIQC completes successfully (takes ~15-20 minutes), the server reads the official output JSON (`sub-<id>_T1w.json`) and updates the metrics on the dashboard automatically.
 
 ---
 

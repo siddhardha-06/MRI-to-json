@@ -469,11 +469,25 @@
               <!-- Quality rating banner -->
               <div class="mriqc-rating-banner">
                 <div class="rating-badge grade-excellent" id="mriqc-rating-badge">—</div>
-                <div class="rating-info">
-                  <div class="rating-label" id="mriqc-quality-label">Computed from Automated Pipeline</div>
-                  <div class="rating-desc" id="mriqc-quality-desc">Official MRIQC metrics calculated during the upload sequence.</div>
-                </div>
-              </div>
+                                        <div class="rating-info" style="flex: 1;">
+                                            <h4>Overall Scan Quality: <span id="mriqc-quality-label">Excellent</span></h4>
+                                            <p id="mriqc-quality-desc">This scan meets or exceeds all clinical quality thresholds. Signal-to-noise ratio is high, and motion artifacts are minimal.</p>
+                                        </div>
+                                        <!-- Confidence Score Gauge -->
+                                        <div class="confidence-gauge-wrap">
+                                            <div class="confidence-label">Confidence Score</div>
+                                            <div class="confidence-gauge">
+                                                <svg viewBox="0 0 80 80" width="80" height="80">
+                                                    <circle class="gauge-bg" cx="40" cy="40" r="33" fill="none" stroke-width="7"/>
+                                                    <circle class="gauge-fill" id="confidence-gauge-ring" cx="40" cy="40" r="33" fill="none" stroke-width="7"
+                                                        stroke-dasharray="207.3" stroke-dashoffset="207.3"
+                                                        transform="rotate(-90 40 40)"/>
+                                                </svg>
+                                                <div class="gauge-text">
+                                                    <span id="confidence-score-value">—</span>
+                                                </div>
+                                            </div>
+                                        </div>
 
               <!-- Docker run control row -->
               <div class="mriqc-docker-row">
