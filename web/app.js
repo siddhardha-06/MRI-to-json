@@ -11,6 +11,7 @@ let patientData     = null;
 let availablePatients = [];
 let isRunningStep   = false;
 let logPollInterval = null;
+let lastLogIndex    = 0;
 let activeRibbonStep = null;
 let processingStartTime = null;
 let currentStageIndex   = 0;
@@ -416,7 +417,7 @@ async function handleFileUpload(file) {
                  hcirc.innerHTML = `<svg style="width:18px;height:18px"><use href="#ic-close"/></svg>`;
               }
               
-              alert(`Scan Quality Rejected!\nGrade: ${qData.grade}\nScore: ${qData.score}/100\n\nReason: ${qData.reason}\n\nThe pipeline has been halted. Please upload a scan with better quality.`);
+              showCustomQualityAlert(qData.grade, qData.score, qData.reason);
               
               // Reset to upload screen
               setTimeout(() => {
@@ -587,6 +588,9 @@ function openStageDrawer(stage) {
       appendStatCard(grid, "CSF Volume",          v.csf_volume_ml.toFixed(1),               "mL", true);
       appendStatCard(grid, "Left Hippocampus",    v.left_hippocampus_volume_ml.toFixed(3),  "mL", false);
       appendStatCard(grid, "Right Hippocampus",   v.right_hippocampus_volume_ml.toFixed(3), "mL", false);
+      if (v.hippocampus_asymmetry_index !== undefined) {
+        appendStatCard(grid, "Hippo Asymmetry",   v.hippocampus_asymmetry_index.toFixed(2), "%", true);
+      }
     }
   }
 
@@ -802,14 +806,42 @@ function renderPatientDetails() {
   if (tblVol) {
     const vols = patientData.volumetric_statistics;
     if (vols) {
-      tblVol.innerHTML = [
+      const rows_list = [
         ["Total Brain", `${vols.total_brain_volume_ml?.toFixed(1)} mL`],
         ["Gray Matter", `${vols.gray_matter_volume_ml?.toFixed(1)} mL`],
         ["White Matter",`${vols.white_matter_volume_ml?.toFixed(1)} mL`],
         ["CSF Volume",  `${vols.csf_volume_ml?.toFixed(1)} mL`],
-        ["L Hippocampus",`${vols.left_hippocampus_volume_ml?.toFixed(3)} mL`],
-        ["R Hippocampus",`${vols.right_hippocampus_volume_ml?.toFixed(3)} mL`],
-      ].map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join("");
+      ];
+      
+      const addBilateral = (name, leftKey, rightKey, aiKey) => {
+        if (vols[leftKey] !== undefined) {
+          rows_list.push([`L ${name}`, `${vols[leftKey]?.toFixed(3)} mL`]);
+        }
+        if (vols[rightKey] !== undefined) {
+          rows_list.push([`R ${name}`, `${vols[rightKey]?.toFixed(3)} mL`]);
+        }
+        if (vols[aiKey] !== undefined) {
+          rows_list.push([`${name} Asymmetry`, `${vols[aiKey]?.toFixed(2)} %`]);
+        }
+      };
+
+      addBilateral("Lateral Ventricle", "left_ventricle_volume_ml", "right_ventricle_volume_ml", "ventricle_asymmetry_index");
+      addBilateral("Thalamus", "left_thalamus_volume_ml", "right_thalamus_volume_ml", "thalamus_asymmetry_index");
+      addBilateral("Caudate", "left_caudate_volume_ml", "right_caudate_volume_ml", "caudate_asymmetry_index");
+      addBilateral("Putamen", "left_putamen_volume_ml", "right_putamen_volume_ml", "putamen_asymmetry_index");
+      addBilateral("Pallidum", "left_pallidum_volume_ml", "right_pallidum_volume_ml", "pallidum_asymmetry_index");
+      addBilateral("Hippocampus", "left_hippocampus_volume_ml", "right_hippocampus_volume_ml", "hippocampus_asymmetry_index");
+      addBilateral("Amygdala", "left_amygdala_volume_ml", "right_amygdala_volume_ml", "amygdala_asymmetry_index");
+
+      tblVol.innerHTML = rows_list.map(([k,v]) => {
+        const isAI = k.includes("Asymmetry");
+        const isBold = k === "Total Brain" || isAI;
+        const style = isBold 
+          ? `font-weight:700;${isAI ? 'color:var(--g2);border-bottom:1px solid rgba(0,0,0,0.06);background:var(--g-xlt);' : 'border-top:1px solid var(--border-soft);'}` 
+          : '';
+        const padding = isAI ? 'padding-left:12px;' : '';
+        return `<tr style="${style}"><td style="${padding}">${k}</td><td>${v}</td></tr>`;
+      }).join("");
     } else {
       tblVol.innerHTML = `<tr><td colspan="2" style="color:var(--t4);text-align:center;padding:16px 0;font-size:11px;">3D volumes computed on-the-fly for uploaded scans only.</td></tr>`;
     }
@@ -995,9 +1027,10 @@ function runPipelineStep(step) {
 }
 
 function startPollingLogs(step) {
+  lastLogIndex = 0;
   if (logPollInterval) clearInterval(logPollInterval);
   logPollInterval = setInterval(() => {
-    fetch("/api/logs")
+    fetch(`/api/logs?index=${lastLogIndex}`)
       .then(r => r.json())
       .then(data => {
         if (data.new_lines?.length > 0) {
@@ -1016,6 +1049,7 @@ function startPollingLogs(step) {
               srpLog.scrollTop = srpLog.scrollHeight;
             }
           });
+          lastLogIndex = data.next_index;
         }
         if (data.is_running === false) {
           clearInterval(logPollInterval);
@@ -1247,6 +1281,78 @@ function triggerDownload(content, filename, type) {
 }
 
 // ── Init ──────────────────────────────────────────────────────────
+function showCustomQualityAlert(grade, score, reason) {
+  let modal = document.getElementById("quality-alert-modal");
+  if (modal) modal.remove();
+
+  modal = document.createElement("div");
+  modal.id = "quality-alert-modal";
+  modal.style.position = "fixed";
+  modal.style.top = "0";
+  modal.style.left = "0";
+  modal.style.width = "100%";
+  modal.style.height = "100%";
+  modal.style.backgroundColor = "rgba(15, 23, 42, 0.75)";
+  modal.style.backdropFilter = "blur(8px)";
+  modal.style.display = "flex";
+  modal.style.alignItems = "center";
+  modal.style.justifyContent = "center";
+  modal.style.zIndex = "99999";
+  modal.style.transition = "opacity 0.3s ease";
+
+  const content = document.createElement("div");
+  content.style.backgroundColor = "#1e293b";
+  content.style.border = "1px solid rgba(239, 68, 68, 0.4)";
+  content.style.borderRadius = "16px";
+  content.style.padding = "32px";
+  content.style.maxWidth = "480px";
+  content.style.width = "90%";
+  content.style.boxShadow = "0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(239, 68, 68, 0.15)";
+  content.style.textAlign = "center";
+  content.style.color = "#f8fafc";
+  content.style.fontFamily = "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif";
+
+  content.innerHTML = `
+    <div style="width: 56px; height: 56px; background-color: rgba(239, 68, 68, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; border: 1px solid rgba(239, 68, 68, 0.25)">
+      <svg style="width: 28px; height: 28px; color: #ef4444;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+      </svg>
+    </div>
+    <h3 style="font-size: 20px; font-weight: 600; margin-bottom: 8px; color: #ef4444;">Scan Quality Rejected</h3>
+    <p style="font-size: 14px; color: #94a3b8; margin-bottom: 24px;">The uploaded MRI scan failed to pass the official MRIQC quality threshold gate and cannot be processed safely.</p>
+    
+    <div style="background-color: #0f172a; border-radius: 8px; padding: 16px; margin-bottom: 24px; text-align: left; border: 1px solid #334155;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
+        <span style="color: #64748b;">Quality Grade:</span>
+        <span style="font-weight: 600; color: #ef4444;">${grade}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 13px; border-bottom: 1px solid #1e293b; padding-bottom: 8px;">
+        <span style="color: #64748b;">MRIQC Score:</span>
+        <span style="font-weight: 600; color: #ef4444;">${score} / 100</span>
+      </div>
+      <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">
+        <strong style="color: #cbd5e1; display: block; margin-bottom: 4px;">Reason:</strong>
+        ${reason}
+      </div>
+    </div>
+    
+    <button id="close-quality-modal-btn" style="width: 100%; padding: 12px; background-color: #ef4444; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: background-color 0.2s ease; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);">
+      Acknowledge & Dismiss
+    </button>
+  `;
+
+  modal.appendChild(content);
+  document.body.appendChild(modal);
+
+  const closeBtn = document.getElementById("close-quality-modal-btn");
+  if (closeBtn) {
+    closeBtn.onclick = () => {
+      modal.style.opacity = "0";
+      setTimeout(() => modal.remove(), 300);
+    };
+  }
+}
+
 function init() {
   showState(STATES.UPLOAD);
   initNeuralCanvas();

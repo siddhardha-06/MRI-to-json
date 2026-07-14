@@ -7,6 +7,11 @@ torchaudio>=2.0.0
 nibabel>=4.0.0
 numpy>=1.21.0
 scipy>=1.7.0
+scikit-image>=0.19.0
+pillow>=9.0.0
+
+# API / LLM
+google-genai>=0.1.0
 
 # Pseudo-label generation (OPTIONAL - install separately if needed)
 antspyx>=0.3.8     # Replaces SynthSeg for tissue segmentation on Windows/Linux/Mac

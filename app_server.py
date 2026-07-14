@@ -36,6 +36,8 @@ REPORTS_DIR = os.path.join(WORKSPACE_DIR, 'reports')
 active_process = None
 active_logs = []
 is_running = False
+pipeline_lock = threading.Lock()
+active_extractions = {}
 
 # MRIQC Docker job tracking
 mriqc_jobs = {}
@@ -160,7 +162,7 @@ def run_official_mriqc_thread(patient_id, mri_path):
             if docker_check.returncode != 0:
                 raise FileNotFoundError("Docker not found")
 
-        cmd = f'{docker_cmd} run --rm -v "{abs_temp_dir}:/data:ro" -v "{abs_out_dir}:/out" nipreps/mriqc:latest /data /out participant --participant-label {bids_id} --no-sub'
+        cmd = f'{docker_cmd} run --rm -v "{abs_temp_dir}:/data:ro" -v "{abs_out_dir}:/out" nipreps/mriqc:latest /data /out participant --participant-label {bids_id} --no-sub --mem_gb 6 --nprocs 1'
         job["logs"].append(f"Executing: {cmd}\n")
         job["progress"] = "Running MRIQC Docker container..."
 
@@ -230,6 +232,16 @@ def run_official_mriqc_thread(patient_id, mri_path):
     except Exception as e:
         job["status"] = "failed"
         job["logs"].append(f"Error during MRIQC run: {str(e)}\n")
+    finally:
+        # Clean up BIDS temp directories for this specific patient
+        patient_temp = os.path.join(bids_temp_dir, f"sub-{bids_id}")
+        patient_out = os.path.join(bids_out_dir, f"sub-{bids_id}")
+        for path_to_clean in [patient_temp, patient_out]:
+            if os.path.exists(path_to_clean):
+                try:
+                    shutil.rmtree(path_to_clean)
+                except Exception:
+                    pass
 
 
 # Ensure dirs exist
@@ -259,10 +271,15 @@ def load_mri_slice(path: str) -> np.ndarray:
 
 
 def run_feature_extraction(mri_path: str):
-    """Run full 40-feature extraction on NIfTI file and return structures"""
+    """Run 40-feature extraction on NIfTI file and return structures"""
     # Dynamic N4 bias correction for uploaded files to match training domain
-    # (prevents compression of White Matter signal caused by scanner bias field)
-    n4_path = mri_path.replace(".nii", "_n4.nii")
+    dir_name = os.path.dirname(mri_path)
+    file_name = os.path.basename(mri_path)
+    if file_name.endswith(".nii.gz"):
+        n4_name = file_name[:-7] + "_n4.nii.gz"
+    else:
+        n4_name = os.path.splitext(file_name)[0] + "_n4.nii"
+    n4_path = os.path.join(dir_name, n4_name)
     active_mri = mri_path
     
     if not os.path.exists(n4_path):
@@ -367,7 +384,14 @@ def run_feature_extraction(mri_path: str):
             
             # Save the segmentation mask as NIfTI
             import nibabel as nib
-            seg_path = active_mri.replace(".nii", "_seg.nii").replace("_n4_seg.nii", "_seg.nii")
+            dir_name = os.path.dirname(active_mri)
+            file_name = os.path.basename(active_mri)
+            if file_name.endswith(".nii.gz"):
+                seg_name = file_name[:-7] + "_seg.nii.gz"
+            else:
+                seg_name = os.path.splitext(file_name)[0] + "_seg.nii"
+            seg_name = seg_name.replace("_n4_seg", "_seg")
+            seg_path = os.path.join(dir_name, seg_name)
             try:
                 nib_img = nib.load(active_mri)
                 seg_nib = nib.Nifti1Image(seg_arr, nib_img.affine)
@@ -399,20 +423,90 @@ def run_feature_extraction(mri_path: str):
             )
             warped_arr = warped_labels.numpy()
             
-            left_vox = (warped_arr == 9).sum()
-            right_vox = (warped_arr == 19).sum()
-            
-            left_hippo = float(left_vox * voxel_vol_ml)
-            right_hippo = float(right_vox * voxel_vol_ml)
+            def get_vol(label_idx):
+                return float((warped_arr == label_idx).sum() * voxel_vol_ml)
+                
+            def calc_ai(left, right):
+                denom = 0.5 * (left + right)
+                if denom == 0:
+                    return 0.0
+                return (abs(left - right) / denom) * 100.0
+
+            left_hippo = get_vol(9)
+            right_hippo = get_vol(19)
+            hippo_ai = calc_ai(left_hippo, right_hippo)
+
+            left_vent = get_vol(3)
+            right_vent = get_vol(14)
+            vent_ai = calc_ai(left_vent, right_vent)
+
+            left_thal = get_vol(4)
+            right_thal = get_vol(15)
+            thal_ai = calc_ai(left_thal, right_thal)
+
+            left_caud = get_vol(5)
+            right_caud = get_vol(16)
+            caud_ai = calc_ai(left_caud, right_caud)
+
+            left_puta = get_vol(6)
+            right_puta = get_vol(17)
+            puta_ai = calc_ai(left_puta, right_puta)
+
+            left_pall = get_vol(7)
+            right_pall = get_vol(18)
+            pall_ai = calc_ai(left_pall, right_pall)
+
+            left_amyg = get_vol(10)
+            right_amyg = get_vol(20)
+            amyg_ai = calc_ai(left_amyg, right_amyg)
             
             volumetric_stats = {
                 "total_brain_volume_ml": tbv_vol,
                 "gray_matter_volume_ml": gm_vol,
                 "white_matter_volume_ml": wm_vol,
                 "csf_volume_ml": csf_vol,
+                
+                # Hippocampus
                 "left_hippocampus_volume_ml": left_hippo,
                 "right_hippocampus_volume_ml": right_hippo,
-                "total_hippocampus_volume_ml": left_hippo + right_hippo
+                "total_hippocampus_volume_ml": left_hippo + right_hippo,
+                "hippocampus_asymmetry_index": hippo_ai,
+                
+                # Ventricles
+                "left_ventricle_volume_ml": left_vent,
+                "right_ventricle_volume_ml": right_vent,
+                "total_ventricle_volume_ml": left_vent + right_vent,
+                "ventricle_asymmetry_index": vent_ai,
+                
+                # Thalamus
+                "left_thalamus_volume_ml": left_thal,
+                "right_thalamus_volume_ml": right_thal,
+                "total_thalamus_volume_ml": left_thal + right_thal,
+                "thalamus_asymmetry_index": thal_ai,
+                
+                # Caudate
+                "left_caudate_volume_ml": left_caud,
+                "right_caudate_volume_ml": right_caud,
+                "total_caudate_volume_ml": left_caud + right_caud,
+                "caudate_asymmetry_index": caud_ai,
+                
+                # Putamen
+                "left_putamen_volume_ml": left_puta,
+                "right_putamen_volume_ml": right_puta,
+                "total_putamen_volume_ml": left_puta + right_puta,
+                "putamen_asymmetry_index": puta_ai,
+                
+                # Pallidum
+                "left_pallidum_volume_ml": left_pall,
+                "right_pallidum_volume_ml": right_pall,
+                "total_pallidum_volume_ml": left_pall + right_pall,
+                "pallidum_asymmetry_index": pall_ai,
+                
+                # Amygdala
+                "left_amygdala_volume_ml": left_amyg,
+                "right_amygdala_volume_ml": right_amyg,
+                "total_amygdala_volume_ml": left_amyg + right_amyg,
+                "amygdala_asymmetry_index": amyg_ai
             }
             print("Successfully calculated 3D volumetric statistics.")
         else:
@@ -545,7 +639,7 @@ Parenchyma:
     • No evidence of cortical dysplasia or hippocampal sclerosis
 
 Pathology Indicators:
-    • Risk Level: {"LOW" if features_dict.get("pathology_indicators", {}).get("risk_level", "LOW") == "LOW" else "MEDIUM"}
+    • Risk Level: {features_dict.get("pathology_indicators", {}).get("risk_level", "LOW")}
     • No significant pathology flags detected
 
 ═════════════════════════════════════════════════════════════════════════════
@@ -595,7 +689,8 @@ def read_process_stdout(process):
         active_logs.append(line.decode('utf-8', errors='ignore'))
     
     process.wait()
-    is_running = False
+    with pipeline_lock:
+        is_running = False
 
 
 # =============================================================================
@@ -724,7 +819,7 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
                 print("Error loading features keys:", e)
 
         # 2. Add uploaded patients
-        uploaded_scans = sorted(pathlib.Path(UPLOADS_DIR).glob("*/*.nii"))
+        uploaded_scans = sorted(list(pathlib.Path(UPLOADS_DIR).glob("*/*.nii")) + list(pathlib.Path(UPLOADS_DIR).glob("*/*.nii.gz")))
         for scan in uploaded_scans:
             scan_id = scan.parent.name
             if scan_id not in patients:
@@ -735,6 +830,11 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
     # API: Load patient quantitative metrics (and compares vectors)
     def handle_api_features(self, patient_id):
         patient_id = urllib.parse.unquote(patient_id)
+        
+        # If there is an active background extraction thread for this patient, wait for it!
+        if patient_id in active_extractions:
+            print(f"Waiting for background feature extraction to complete for patient {patient_id}...")
+            active_extractions[patient_id].join(timeout=240)
         
         # Check if patient is inside uploads
         scan_dir = os.path.join(UPLOADS_DIR, patient_id)
@@ -811,6 +911,46 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
                 except Exception as e:
                     print("Error loading features:", e)
             
+            # Check for cached or compute on-the-fly volumetric statistics for dataset patients
+            if feature_data and "volumetric_statistics" not in feature_data:
+                cache_file = os.path.join(scan_dir, "features.json")
+                if os.path.exists(cache_file):
+                    try:
+                        with open(cache_file, 'r') as f:
+                            cache_data = json.load(f)
+                            if "volumetric_statistics" in cache_data:
+                                feature_data["volumetric_statistics"] = cache_data["volumetric_statistics"]
+                    except Exception:
+                        pass
+                
+                if "volumetric_statistics" not in feature_data:
+                    try:
+                        prefix = "-".join(patient_id.split("-")[:3])
+                        dataset_dir = os.path.join(WORKSPACE_DIR, "ixi-t1")
+                        mri_files = list(pathlib.Path(dataset_dir).rglob("*.nii")) + list(pathlib.Path(dataset_dir).rglob("*.nii.gz"))
+                        dataset_mri_path = None
+                        for f in mri_files:
+                            if f.is_file() and f.name.startswith(prefix):
+                                dataset_mri_path = str(f)
+                                break
+                        
+                        if dataset_mri_path:
+                            print(f"Dataset patient {patient_id} volumetric statistics requested. Calculating on-the-fly...")
+                            extraction_results = run_feature_extraction(dataset_mri_path)
+                            if extraction_results.get("volumetric_statistics") is not None:
+                                feature_data["volumetric_statistics"] = extraction_results["volumetric_statistics"]
+                                
+                                # Cache it for fast loading next time
+                                os.makedirs(scan_dir, exist_ok=True)
+                                cache_payload = feature_data.copy()
+                                temp_cache_file = cache_file + ".tmp"
+                                with open(temp_cache_file, 'w') as f:
+                                    json.dump(cache_payload, f, indent=2)
+                                os.replace(temp_cache_file, cache_file)
+                                print(f"Cached volumetric statistics for dataset scan: {patient_id}")
+                    except Exception as e:
+                        print(f"[WARNING] On-the-fly volumetric calculation failed for dataset patient {patient_id}: {e}")
+
             # Retrieve predicted vector (by flattening the predicted features dictionary)
             if feature_data:
                 predicted_vector = flatten_feature_dict(feature_data)
@@ -833,9 +973,25 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
         seg_url = None
         
         if source == "uploads":
-            # For uploads, we check the directory contents
-            mri_url = f"/uploads/{patient_id}/{patient_id}_n4.nii"
-            seg_url = f"/uploads/{patient_id}/{patient_id}_seg.nii"
+            # For uploads, check file existence on disk (N4/seg output check with .nii and .nii.gz)
+            n4_nii = os.path.join(scan_dir, f"{patient_id}_n4.nii")
+            n4_nii_gz = os.path.join(scan_dir, f"{patient_id}_n4.nii.gz")
+            if os.path.exists(n4_nii):
+                mri_url = f"/uploads/{patient_id}/{patient_id}_n4.nii"
+            elif os.path.exists(n4_nii_gz):
+                mri_url = f"/uploads/{patient_id}/{patient_id}_n4.nii.gz"
+            else:
+                # Fallback to the original uploaded scan file
+                orig_scans = list(pathlib.Path(scan_dir).glob(f"{patient_id}.nii*"))
+                if orig_scans:
+                    mri_url = f"/uploads/{patient_id}/{orig_scans[0].name}"
+                    
+            seg_nii = os.path.join(scan_dir, f"{patient_id}_seg.nii")
+            seg_nii_gz = os.path.join(scan_dir, f"{patient_id}_seg.nii.gz")
+            if os.path.exists(seg_nii):
+                seg_url = f"/uploads/{patient_id}/{patient_id}_seg.nii"
+            elif os.path.exists(seg_nii_gz):
+                seg_url = f"/uploads/{patient_id}/{patient_id}_seg.nii.gz"
         else:
             # For dataset patients, search recursively in ixi-t1 using prefix (subject ID)
             try:
@@ -912,7 +1068,13 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
                 try:
                     with open(FEATURES_FILE, 'r') as f:
                         all_pred = json.load(f)
-                        features_dict = all_pred.get(patient_id)
+                        if "schema_version" in all_pred:
+                            pred_filename = all_pred.get("scan_metadata", {}).get("filename", "")
+                            pred_patient_id = pathlib.Path(pred_filename).stem if pred_filename else ""
+                            if patient_id == pred_patient_id:
+                                features_dict = all_pred
+                        else:
+                            features_dict = all_pred.get(patient_id)
                 except Exception:
                     pass
             
@@ -947,11 +1109,25 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
                 with open(cache_file, 'r') as f:
                     cached = json.load(f)
                 metrics = cached.get("mriqc_metrics")
-
-                # We removed the immediate simulation here.
-                # If metrics are not available, it means Docker MRIQC hasn't run or failed.
+                if not metrics:
+                    # Graceful fallback: if Docker MRIQC wasn't run or failed, simulate from rule-based vector
+                    vector = cached.get("rule_based_array")
+                    if vector:
+                        metrics = simulate_mriqc_from_vector(vector)
             except Exception as e:
                 print(f"Quality gate check error: {e}")
+
+        # 2. Check dataset precomputed features
+        if not metrics:
+            if os.path.exists(RULE_FEATURES_FILE):
+                try:
+                    with open(RULE_FEATURES_FILE, 'r') as f:
+                        all_rule = json.load(f)
+                    vector = all_rule.get(patient_id)
+                    if vector:
+                        metrics = simulate_mriqc_from_vector(vector)
+                except Exception as e:
+                    print(f"Error loading rule features for quality gate: {e}")
 
         if not metrics:
             self.send_json_response({
@@ -1059,47 +1235,85 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
             return
 
         # Prepare filenames
-        scan_id = filename.replace(".nii", "").strip()
+        if filename.endswith(".nii.gz"):
+            scan_id = filename[:-7].strip()
+            extension = ".nii.gz"
+        else:
+            scan_id = filename[:-4].strip() if filename.endswith(".nii") else filename.strip()
+            extension = ".nii"
+
         # Clean special chars to make safe dir name
         for char in ['/', '\\', '?', '%', '*', ':', '|', '"', '<', '>', ' ']:
             scan_id = scan_id.replace(char, "_")
             
-        dest_dir = os.path.join(UPLOADS_DIR, scan_id)
+        # Security: prevent directory traversal
+        dest_dir = os.path.abspath(os.path.join(UPLOADS_DIR, scan_id))
+        if not dest_dir.startswith(os.path.abspath(UPLOADS_DIR)):
+            self.send_error(400, "Invalid filename / path traversal attempt")
+            return
+            
         os.makedirs(dest_dir, exist_ok=True)
-        
-        dest_file = os.path.join(dest_dir, f"{scan_id}.nii")
+        dest_file = os.path.join(dest_dir, f"{scan_id}{extension}")
         
         try:
+            # Write to final destination directly so nibabel can work out the file type based on extension
             with open(dest_file, 'wb') as f:
                 f.write(file_data)
                 
-            print(f"Saved uploaded scan to {dest_file}")
+            # Validate NIfTI file structure using nibabel
+            try:
+                test_img = nib.load(dest_file)
+                test_img.shape
+            except Exception as e:
+                if os.path.exists(dest_file):
+                    try:
+                        os.remove(dest_file)
+                    except Exception:
+                        pass
+                self.send_error(400, f"Invalid or corrupt NIfTI scan: {str(e)}")
+                return
+                
+            print(f"Validated and saved uploaded scan to {dest_file}")
             
-            # Immediately run dynamic feature extraction and cache it
-            extraction_results = run_feature_extraction(dest_file)
-            rule_based_vector = extraction_results["rule_based_vector"]
-            feature_data = features_list_to_dict(
-                filename=filename,
-                features=rule_based_vector
-            )
-            feature_data["structural_features"]["centroid"] = extraction_results["centroid"]
-            feature_data["structural_features"]["bounding_box"] = extraction_results["bbox"]
-            if extraction_results.get("volumetric_statistics") is not None:
-                feature_data["volumetric_statistics"] = extraction_results["volumetric_statistics"]
-
-            # Cache payload (without MRIQC metrics)
-            cache_payload = feature_data.copy()
-            cache_payload["rule_based_array"] = rule_based_vector
+            # Immediately run dynamic feature extraction in the background
             cache_file = os.path.join(dest_dir, "features.json")
-            temp_cache_file = cache_file + ".tmp"
-            with open(temp_cache_file, 'w') as f:
-                json.dump(cache_payload, f, indent=2)
-            os.replace(temp_cache_file, cache_file)
+            
+            def run_extraction_bg():
+                try:
+                    extraction_results = run_feature_extraction(dest_file)
+                    rule_based_vector = extraction_results["rule_based_vector"]
+                    feature_data = features_list_to_dict(
+                        filename=os.path.basename(dest_file),
+                        features=rule_based_vector
+                    )
+                    feature_data["structural_features"]["centroid"] = extraction_results["centroid"]
+                    feature_data["structural_features"]["bounding_box"] = extraction_results["bbox"]
+                    if extraction_results.get("volumetric_statistics") is not None:
+                        feature_data["volumetric_statistics"] = extraction_results["volumetric_statistics"]
+
+                    # Cache payload (without MRIQC metrics)
+                    cache_payload = feature_data.copy()
+                    cache_payload["rule_based_array"] = rule_based_vector
+                    
+                    temp_cache = cache_file + ".tmp"
+                    with open(temp_cache, 'w') as f:
+                        json.dump(cache_payload, f, indent=2)
+                    os.replace(temp_cache, cache_file)
+                    print(f"[SUCCESS] Background feature extraction complete for {scan_id}")
+                except Exception as e:
+                    print(f"[ERROR] Background feature extraction failed for {scan_id}: {e}")
+                finally:
+                    active_extractions.pop(scan_id, None)
+
+            t = threading.Thread(target=run_extraction_bg)
+            t.daemon = True
+            active_extractions[scan_id] = t
+            t.start()
             
             self.send_json_response({
-                "status": "success",
+                "status": "started",
                 "patient_id": scan_id,
-                "path": f"uploads/{scan_id}/{scan_id}.nii",
+                "path": f"uploads/{scan_id}/{scan_id}{extension}",
                 "mriqc_passed": False,
                 "mriqc_grade":  "?",
                 "mriqc_label":  "Pending",
@@ -1109,7 +1323,7 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
             })
             
         except Exception as e:
-            self.send_error(500, f"Failed to save and process file: {str(e)}")
+            self.send_error(500, f"Failed to save file: {str(e)}")
 
     # API: Trigger command line subprocess execution
     def handle_api_run_step(self):
@@ -1122,9 +1336,11 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
         step = payload.get('step')
         data_source = payload.get('data_source', 'ixi-t1')
         
-        if is_running:
-            self.send_json_response({"status": "error", "error": "Pipeline step already running"})
-            return
+        with pipeline_lock:
+            if is_running:
+                self.send_json_response({"status": "error", "error": "Pipeline step already running"})
+                return
+            is_running = True
 
         # Map step number to pipeline command execution
         cmd = ""
@@ -1153,7 +1369,6 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
 
         # Reset logs
         active_logs = []
-        is_running = True
         
         # Append start cmd log
         active_logs.append(f"Executing: {cmd}\n")
@@ -1179,7 +1394,8 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
             })
             
         except Exception as e:
-            is_running = False
+            with pipeline_lock:
+                is_running = False
             self.send_json_response({"status": "error", "error": str(e)})
 
     # Utilities
@@ -1328,7 +1544,7 @@ def download_volumetric_templates():
         if not os.path.exists(labels_path):
             print("[INFO] Downloading Harvard-Oxford subcortical labels (from NeuroVault)...")
             try:
-                url = "http://neurovault.org/media/images/262/HarvardOxford-sub-maxprob-thr25-2mm.nii.gz"
+                url = "https://neurovault.org/media/images/262/HarvardOxford-sub-maxprob-thr25-2mm.nii.gz"
                 req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
                 with urllib.request.urlopen(req) as response, open(labels_path, 'wb') as out_file:
                     out_file.write(response.read())

@@ -18,7 +18,7 @@ from datetime import datetime
 from google import genai
 from google.genai import types
 
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "REDACTED_API_KEY")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
 def format_clinical_report(patient_id: str, features: dict, clinical_summary: str, timestamp: datetime) -> str:
     """Format the clinical report according to professional medical report template."""

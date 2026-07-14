@@ -725,6 +725,7 @@ def train_unet(
     learning_rate=1e-3,
     save_dir="checkpoints",
     val_split=0.2,
+    resume=False,
 ):
     """
     Train U-Net segmentation model using ANTsPy pseudo-labels.
@@ -810,6 +811,7 @@ def train_unet(
         pin_memory=pin_mem
     )
 
+    start_epoch = 0
     # Model
     model = UNet2D(in_channels=1, num_classes=4, base_filters=64).to(device)
     # num_classes=4: Background(0), CSF(1), GM(2), WM(3)
@@ -826,15 +828,37 @@ def train_unet(
 
     # Optimizer: AdamW with weight decay (L2 regularization) to prevent overfitting
     optimizer = optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=1e-4)
-    # Scheduler: Cosine Annealing LR scheduler
-    scheduler = optim.lr_scheduler.CosineAnnealingLR(
-        optimizer, T_max=num_epochs, eta_min=1e-5
-    )
 
     history  = {"epoch": [], "train_loss": [], "val_loss": []}
     best_val_loss = float('inf')
 
-    for epoch in range(num_epochs):
+    ckpt_path = os.path.join(save_dir, "unet_best.pth")
+    if resume and os.path.exists(ckpt_path):
+        print(f"Resuming training from checkpoint: {ckpt_path}")
+        try:
+            checkpoint = torch.load(ckpt_path, map_location=device)
+            model.load_state_dict(checkpoint["model_state"])
+            optimizer.load_state_dict(checkpoint["optimizer_state"])
+            start_epoch = checkpoint["epoch"]
+            best_val_loss = checkpoint.get("val_loss", float('inf'))
+            print(f"Loaded checkpoint at epoch {start_epoch} with val_loss: {best_val_loss:.6f}")
+            
+            history_path = os.path.join(save_dir, "unet_history.json")
+            if os.path.exists(history_path):
+                with open(history_path, 'r') as f:
+                    history = json.load(f)
+                for key in ["epoch", "train_loss", "val_loss"]:
+                    history[key] = history[key][:start_epoch]
+        except Exception as e:
+            print(f"[WARNING] Failed to load checkpoint, starting from scratch: {e}")
+            start_epoch = 0
+
+    # Scheduler: Cosine Annealing LR scheduler
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(
+        optimizer, T_max=num_epochs, eta_min=1e-5, last_epoch=start_epoch - 1
+    )
+
+    for epoch in range(start_epoch, num_epochs):
         # ── Training ─────────────────────────────────────────────────
         model.train()
         total_train_loss = 0
@@ -1046,6 +1070,8 @@ if __name__ == "__main__":
                         help="Output path for 3D segmentation NIfTI (used with --segment)")
     parser.add_argument("--val-split",      type=float, default=0.2,
                         help="Validation split ratio (default: 0.2 = 80/20)")
+    parser.add_argument("--resume",         action="store_true",
+                        help="Resume training from existing checkpoints/unet_best.pth")
 
     args = parser.parse_args()
 
@@ -1094,4 +1120,5 @@ if __name__ == "__main__":
             learning_rate = args.lr,
             save_dir      = args.save_dir,
             val_split     = args.val_split,
+            resume        = args.resume,
         )

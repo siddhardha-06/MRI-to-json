@@ -3,9 +3,9 @@ Extract Rule-Based Features from MRI Pipeline Output
 Converts nested JSON into flat feature vectors for ML training
 
 Input: MRI files (.nii)
-Output: rule_based_features.json with 40 features per MRI
+Output: rule_based_features.json with 61 features per MRI
 
-Feature order (40 total):
+Feature order (61 total):
   0-11:  Intensity Statistics (12) — computed on brain-masked voxels (arr>0.05)
   12-18: Tissue Segmentation   (7) — adaptive multi-Otsu on brain voxels
   19-26: Texture Features      (8) — GLCM on brain bounding box crop
@@ -13,6 +13,7 @@ Feature order (40 total):
   33-34: Symmetry              (2) — bilateral correlation & asymmetry index
   35-37: Frequency Domain      (3) — 2-D FFT low/high energy ratio
   38-39: Edge Features         (2) — Sobel sharpness on brain-masked edges
+  40-60: Subcortical Volumes   (21) — 3D Harvard-Oxford atlas segmentations
 """
 
 import json
@@ -322,10 +323,87 @@ def _resolve_mri_path(mri_path: str, mask_dir: str = "ixi-t1-masks") -> str:
     return mri_path
 
 
+def extract_subcortical_features(mri_path: str) -> list:
+    """Extract 21 subcortical structure features (left/right volume and asymmetry) using ANTsPy registration"""
+    try:
+        import ants
+        workspace_dir = os.path.dirname(os.path.abspath(__file__))
+        template_path = os.path.join(workspace_dir, "checkpoints", "MNI152_T1_2mm_brain.nii.gz")
+        labels_path = os.path.join(workspace_dir, "checkpoints", "HarvardOxford-sub-maxprob-thr25-2mm.nii.gz")
+        
+        if not os.path.exists(template_path) or not os.path.exists(labels_path):
+            return [0.0] * 21
+            
+        fixed_img = ants.image_read(mri_path)
+        moving_img = ants.image_read(template_path)
+        labels = ants.image_read(labels_path)
+        
+        reg = ants.registration(fixed=fixed_img, moving=moving_img, type_of_transform='Affine')
+        warped_labels = ants.apply_transforms(
+            fixed=fixed_img,
+            moving=labels,
+            transformlist=reg['fwdtransforms'],
+            interpolation='nearestNeighbor'
+        )
+        warped_arr = warped_labels.numpy()
+        
+        voxel_vol_ml = (fixed_img.spacing[0] * fixed_img.spacing[1] * fixed_img.spacing[2]) / 1000.0
+        
+        def get_vol(label_idx):
+            return float((warped_arr == label_idx).sum() * voxel_vol_ml)
+            
+        def calc_ai(left, right):
+            denom = 0.5 * (left + right)
+            if denom == 0:
+                return 0.0
+            return (abs(left - right) / denom) * 100.0
+
+        left_hippo = get_vol(9)
+        right_hippo = get_vol(19)
+        hippo_ai = calc_ai(left_hippo, right_hippo)
+
+        left_vent = get_vol(3)
+        right_vent = get_vol(14)
+        vent_ai = calc_ai(left_vent, right_vent)
+
+        left_thal = get_vol(4)
+        right_thal = get_vol(15)
+        thal_ai = calc_ai(left_thal, right_thal)
+
+        left_caud = get_vol(5)
+        right_caud = get_vol(16)
+        caud_ai = calc_ai(left_caud, right_caud)
+
+        left_puta = get_vol(6)
+        right_puta = get_vol(17)
+        puta_ai = calc_ai(left_puta, right_puta)
+
+        left_pall = get_vol(7)
+        right_pall = get_vol(18)
+        pall_ai = calc_ai(left_pall, right_pall)
+
+        left_amyg = get_vol(10)
+        right_amyg = get_vol(20)
+        amyg_ai = calc_ai(left_amyg, right_amyg)
+        
+        return [
+            left_vent, right_vent, vent_ai,
+            left_thal, right_thal, thal_ai,
+            left_caud, right_caud, caud_ai,
+            left_puta, right_puta, puta_ai,
+            left_pall, right_pall, pall_ai,
+            left_hippo, right_hippo, hippo_ai,
+            left_amyg, right_amyg, amyg_ai
+        ]
+    except Exception as e:
+        print(f"[WARNING] Failed to extract subcortical features for {mri_path}: {e}")
+        return [0.0] * 21
+
+
 def extract_all_features(mri_path: str, mask_dir: str = "ixi-t1-masks") -> list:
     """
-    Extract and average all 40 features across 5 central slices of the MRI file
-    Returns: [feat1, feat2, ..., feat40]
+    Extract and average all 61 features across 5 central slices of the MRI file
+    Returns: [feat1, feat2, ..., feat61]
     """
     resolved_path = _resolve_mri_path(mri_path, mask_dir)
     if resolved_path != mri_path:
@@ -415,9 +493,11 @@ def extract_all_features(mri_path: str, mask_dir: str = "ixi-t1-masks") -> list:
             slices_features.append(slice_vector)
             
     if not slices_features:
-        return [0.0] * 40
+        return [0.0] * 61
         
-    return np.mean(slices_features, axis=0).tolist()
+    slice_avg = np.mean(slices_features, axis=0).tolist()
+    subcortical_feats = extract_subcortical_features(resolved_path)
+    return slice_avg + subcortical_feats
 
 
 # =============================================================================
@@ -444,10 +524,10 @@ def extract_features_for_all_mris(
         try:
             with open(output_file, 'r') as f:
                 loaded = json.load(f)
-                # Only keep loaded samples that match the expected 40 features length
-                features_dict = {k: v for k, v in loaded.items() if isinstance(v, list) and len(v) == 40}
+                # Only keep loaded samples that match the expected 61 features length
+                features_dict = {k: v for k, v in loaded.items() if isinstance(v, list) and len(v) == 61}
                 if features_dict:
-                    print(f"Resuming feature extraction: found {len(features_dict)} existing 40-feature entries in {output_file}")
+                    print(f"Resuming feature extraction: found {len(features_dict)} existing 61-feature entries in {output_file}")
         except Exception as e:
             print(f"[WARNING] Could not load existing features for resume: {e}")
             features_dict = {}
@@ -466,15 +546,19 @@ def extract_features_for_all_mris(
             
             # Periodically save every 10 samples to prevent data loss on interruption
             if new_extracted_count % 10 == 0:
-                with open(output_file, 'w') as f:
+                temp_output = output_file + ".tmp"
+                with open(temp_output, 'w') as f:
                     json.dump(features_dict, f, indent=2)
+                os.replace(temp_output, output_file)
         except Exception as e:
             errors.append((mri_file.stem, str(e)))
             print(f"\n[WARNING] Error processing {mri_file.stem}: {e}")
     
     # Final save
-    with open(output_file, 'w') as f:
+    temp_output = output_file + ".tmp"
+    with open(temp_output, 'w') as f:
         json.dump(features_dict, f, indent=2)
+    os.replace(temp_output, output_file)
     
     print(f"\n[SUCCESS] Total features dataset size: {len(features_dict)} MRI files")
     if new_extracted_count > 0:
@@ -503,7 +587,7 @@ def extract_features_for_all_mris(
 def print_feature_schema():
     """Print feature order and descriptions"""
     print("\n" + "="*70)
-    print("Feature Schema (40 total features)")
+    print("Feature Schema (61 total features)")
     print("="*70)
     print("\nIntensity Statistics (12):")
     print("  0. mean, 1. std, 2. min, 3. max, 4. median")
@@ -530,6 +614,15 @@ def print_feature_schema():
     
     print("\nEdge Features (2):")
     print("  38. cortical_edge_sharpness, 39. cortical_edge_std")
+    
+    print("\nSubcortical Volumes (21):")
+    print("  40. L_ventricle, 41. R_ventricle, 42. ventricle_AI")
+    print("  43. L_thalamus, 44. R_thalamus, 45. thalamus_AI")
+    print("  46. L_caudate, 47. R_caudate, 48. caudate_AI")
+    print("  49. L_putamen, 50. R_putamen, 51. putamen_AI")
+    print("  52. L_pallidum, 53. R_pallidum, 54. pallidum_AI")
+    print("  55. L_hippocampus, 56. R_hippocampus, 57. hippocampus_AI")
+    print("  58. L_amygdala, 59. R_amygdala, 60. amygdala_AI")
     print("\n" + "="*70)
 
 

@@ -20,7 +20,7 @@ from functools import lru_cache
 # 0. Global Cache & Helper Functions
 # =============================================================================
 
-@lru_cache(maxsize=200)
+@lru_cache(maxsize=16)
 def load_and_preprocess_mri(mri_path):
     """Load MRI NIfTI, apply percentile-clipped normalization, and uncache (shared memory cache)."""
     img = nib.load(mri_path)
@@ -233,6 +233,7 @@ def train_regressor(
     save_dir="checkpoints",
     pretrained_backbone=None,
     limit=None,
+    mask_dir="ixi-t1-masks",
 ):
     """Train feature regressor"""
     import random
@@ -263,7 +264,7 @@ def train_regressor(
             # Domain alignment: only train regressor on scans that have precomputed N4-corrected
             # volumes (ensures training targets are N4-standardized features with accurate WM%).
             stem_name = f.name.replace(".nii.gz", "").replace(".nii", "")
-            n4_path = Path("ixi-t1-masks") / "n4" / f"{stem_name}_n4.nii"
+            n4_path = Path(mask_dir) / "n4" / f"{stem_name}_n4.nii"
             if n4_path.exists():
                 valid_files.append(f)
                 
@@ -852,6 +853,7 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser(description="Train Feature Regressor")
     parser.add_argument("--mri-dir", default="ixi-t1", help="MRI dataset directory")
+    parser.add_argument("--mask-dir", default="ixi-t1-masks", help="Mask directory containing N4-corrected volumes")
     parser.add_argument("--features-file", default="rule_based_features.json",
                        help="JSON file with rule-based features (ground truth)")
     parser.add_argument("--epochs", type=int, default=100, help="Number of epochs")
@@ -891,6 +893,7 @@ if __name__ == "__main__":
             save_dir=args.save_dir,
             pretrained_backbone=args.pretrained_backbone,
             limit=args.limit,
+            mask_dir=args.mask_dir,
         )
     else:
         # Prediction with checkpoint
@@ -915,14 +918,10 @@ if __name__ == "__main__":
             checkpoint["feature_mean"], checkpoint["feature_std"], device
         )
         
-        # Automatically generate clinical reports if GEMINI_API_KEY is available (or fallback)
-        api_key = os.environ.get("GEMINI_API_KEY", "REDACTED_API_KEY")
+        api_key = os.environ.get("GEMINI_API_KEY", "")
         if api_key:
             print("\nGenerating clinical reports...")
             try:
-                # Ensure child imports and processes get the fallback key if not set in environment
-                if "GEMINI_API_KEY" not in os.environ:
-                    os.environ["GEMINI_API_KEY"] = api_key
                 from generate_report import process_all_patients, process_single_patient
                 reports_dir = "reports"
                 if os.path.isfile(args.mri_dir):
