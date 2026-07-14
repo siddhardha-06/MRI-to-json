@@ -152,16 +152,22 @@ class Conv2DAutoencoder(nn.Module):
         # Encoder: 256x256 -> 128x128 -> 64x64 -> 32x32 -> 16x16 -> 8x8 -> 4x4
         self.encoder = nn.Sequential(
             nn.Conv2d(1, 32, kernel_size=4, stride=2, padding=1),      # 128x128
+            nn.BatchNorm2d(32),
             nn.ReLU(),
             nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=1),     # 64x64
+            nn.BatchNorm2d(64),
             nn.ReLU(),
             nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1),    # 32x32
+            nn.BatchNorm2d(128),
             nn.ReLU(),
             nn.Conv2d(128, 256, kernel_size=4, stride=2, padding=1),   # 16x16
+            nn.BatchNorm2d(256),
             nn.ReLU(),
             nn.Conv2d(256, 512, kernel_size=4, stride=2, padding=1),   # 8x8
+            nn.BatchNorm2d(512),
             nn.ReLU(),
             nn.Conv2d(512, 512, kernel_size=4, stride=2, padding=1),   # 4x4
+            nn.BatchNorm2d(512),
             nn.ReLU(),
         )
         
@@ -180,14 +186,19 @@ class Conv2DAutoencoder(nn.Module):
         # Decoder: 4x4 -> 8x8 -> 16x16 -> 32x32 -> 64x64 -> 128x128 -> 256x256
         self.decoder = nn.Sequential(
             nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1),  # 8x8
+            nn.BatchNorm2d(256),
             nn.ReLU(),
             nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1),  # 16x16
+            nn.BatchNorm2d(128),
             nn.ReLU(),
             nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),   # 32x32
+            nn.BatchNorm2d(64),
             nn.ReLU(),
             nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),    # 64x64
+            nn.BatchNorm2d(32),
             nn.ReLU(),
             nn.ConvTranspose2d(32, 16, kernel_size=4, stride=2, padding=1),    # 128x128
+            nn.BatchNorm2d(16),
             nn.ReLU(),
             nn.ConvTranspose2d(16, 1, kernel_size=4, stride=2, padding=1),     # 256x256
             nn.Sigmoid(),
