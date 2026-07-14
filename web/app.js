@@ -1224,7 +1224,13 @@ function setupEventListeners() {
         if (reportCta)     reportCta.style.display = "none";
         if (reportDocument) reportDocument.style.display = "block";
         if (reportToolbar)  reportToolbar.style.display = "flex";
-        if (reportPaper)    reportPaper.innerHTML = `<pre>${data.report || "No report returned."}</pre>`;
+        if (reportPaper) {
+          if (data.report && (data.report.startsWith("<div") || data.report.includes("<style>"))) {
+            reportPaper.innerHTML = data.report;
+          } else {
+            reportPaper.innerHTML = `<pre>${data.report || "No report returned."}</pre>`;
+          }
+        }
       })
       .catch(() => {
         genReport.style.display = "inline-flex";
@@ -1236,7 +1242,11 @@ function setupEventListeners() {
   if (printReport) printReport.addEventListener("click", () => {
     const win = window.open("", "_blank");
     win.document.write(`<html><head><title>Report — ${activePatientId}</title>
-      <style>body{font-family:sans-serif;padding:40px;color:#111}pre{white-space:pre-wrap;font-size:13px;line-height:1.5}</style></head>
+      <style>
+        body { font-family: 'Inter', -apple-system, sans-serif; padding: 20px; color: #1e293b; background: #fff; }
+      </style>
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@700;800&display=swap" rel="stylesheet">
+      </head>
       <body>${$("report-text-content").innerHTML}<script>window.onload=()=>{window.print();window.close()}<\/script></body></html>`);
     win.document.close();
   });
@@ -1244,7 +1254,12 @@ function setupEventListeners() {
   const dlReport = $("btn-download-report");
   if (dlReport) dlReport.addEventListener("click", () => {
     if (!activePatientId) return;
-    triggerDownload($("report-text-content").innerText, `${activePatientId}_report.txt`, "text/plain");
+    const isHtml = $("report-text-content").querySelector(".clinical-report-container") !== null;
+    if (isHtml) {
+      triggerDownload($("report-text-content").innerHTML, `${activePatientId}_report.html`, "text/html");
+    } else {
+      triggerDownload($("report-text-content").innerText, `${activePatientId}_report.txt`, "text/plain");
+    }
   });
 
   const dlJson = $("btn-download-json");

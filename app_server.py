@@ -587,7 +587,7 @@ def make_clinical_summary(features_dict: dict) -> str:
 
 
 def build_clinical_report(patient_id: str, features_dict: dict) -> str:
-    """Format report paper document matching professional radiology report style"""
+    """Format report paper document matching professional radiology report style as clean HTML"""
     timestamp_str = time.strftime("%d-%b-%Y %H:%M:%S %p")
     patient_name = patient_id.split("-")[0] if "-" in patient_id else patient_id
     uhid = patient_id
@@ -602,96 +602,392 @@ def build_clinical_report(patient_id: str, features_dict: dict) -> str:
     contrast = texture.get("glcm_contrast", 0)
     energy = texture.get("glcm_energy", 0)
     homo = texture.get("glcm_homogeneity", 0)
+    entropy = texture.get("shannon_entropy", 0)
     
     struct = features_dict.get("structural_features", {})
     brain_area_pct = struct.get("brain_area_pct", 0)
+    solidity = struct.get("solidity", 0)
+    ecc = struct.get("eccentricity", 0)
+    vent_proxy = struct.get("ventricular_proxy_pct", 0)
     
     symmetry = features_dict.get("symmetry", {})
     bilateral_sym = symmetry.get("bilateral_symmetry_score", 0)
+    asym = symmetry.get("asymmetry_index_pct", 0)
     
+    risk_level = features_dict.get("pathology_indicators", {}).get("risk_level", "LOW").upper()
     clinical_summary = make_clinical_summary(features_dict)
     
-    report = f"""DEPARTMENT OF CLINICAL IMAGING & INTERVENTIONAL RADIOLOGY
+    vol_stats = features_dict.get("volumetric_statistics", {})
+    has_vols = vol_stats and len(vol_stats) > 0
+    
+    vols_html = ""
+    if has_vols:
+        tbv = vol_stats.get("total_brain_volume_ml", 0)
+        lh = vol_stats.get("left_hippocampus_volume_ml", 0)
+        rh = vol_stats.get("right_hippocampus_volume_ml", 0)
+        h_asym = vol_stats.get("hippocampus_asymmetry_index", 0)
+        tv = vol_stats.get("total_ventricle_volume_ml", 0)
+        v_asym = vol_stats.get("ventricle_asymmetry_index", 0)
+        tt = vol_stats.get("total_thalamus_volume_ml", 0)
+        t_asym = vol_stats.get("thalamus_asymmetry_index", 0)
+        tc = vol_stats.get("total_caudate_volume_ml", 0)
+        tp = vol_stats.get("total_putamen_volume_ml", 0)
+        
+        vols_html = f"""
+        <div class="report-section-title">Subcortical Volumetrics (3D Atlas-Based)</div>
+        <ul class="metric-list" style="margin-bottom:15px;">
+          <li class="metric-item">
+            <span class="metric-label">Total Brain Volume (TBV)</span>
+            <span class="metric-value">{tbv:,.2f} mL</span>
+          </li>
+          <li class="metric-item">
+            <span class="metric-label">Total Ventricular Volume</span>
+            <span class="metric-value">{tv:.2f} mL <span class="asymmetry-badge">Asym: {v_asym:.1f}%</span></span>
+          </li>
+          <li class="metric-item">
+            <span class="metric-label">Hippocampus (Left / Right)</span>
+            <span class="metric-value">{lh:.2f} mL / {rh:.2f} mL <span class="asymmetry-badge">Asym: {h_asym:.1f}%</span></span>
+          </li>
+          <li class="metric-item">
+            <span class="metric-label">Thalamus Volume</span>
+            <span class="metric-value">{tt:.2f} mL <span class="asymmetry-badge">Asym: {t_asym:.1f}%</span></span>
+          </li>
+          <li class="metric-item">
+            <span class="metric-label">Caudate / Putamen Volumes</span>
+            <span class="metric-value">{tc:.2f} mL / {tp:.2f} mL</span>
+          </li>
+        </ul>
+        """
+    else:
+        vols_html = """
+        <div class="report-section-title">Subcortical Volumetrics (3D Atlas-Based)</div>
+        <p style="font-size:11px;color:#94a3b8;font-style:italic;margin-top:5px;margin-bottom:15px;">
+          * 3D Atlas-based volumetric registration not generated for this patient scan.
+        </p>
+        """
 
-┌─────────────────────────────────────┬──────────────────────────────────────┐
-│ NAME                 │ {patient_name:<12} │ STUDY      │ {timestamp_str:<20} │
-├──────────────────────┼──────────────┼────────────┼──────────────────────────┤
-│ AGE / GENDER         │ ---          │ UHID       │ {uhid[:32]:<32} │
-├──────────────────────┼──────────────┼────────────┼──────────────────────────┤
-│ ACC NO               │ {acc_no:<12} │ MOD        │ MR                       │
-├──────────────────────┼──────────────┼────────────┼──────────────────────────┤
-│ REFERRER             │ AI System    │ REPORT     │ {timestamp_str:<20} │
-└──────────────────────┴──────────────┴────────────┴──────────────────────────┘
+    report_html = f"""<div class="clinical-report-container">
+  <style>
+    .clinical-report-container {{
+      font-family: 'Inter', -apple-system, sans-serif;
+      color: #1e293b;
+      line-height: 1.5;
+      padding: 10px 5px;
+      background: #fff;
+    }}
+    .report-header {{
+      border-bottom: 2px solid #10b981;
+      padding-bottom: 12px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }}
+    .report-header-left h1 {{
+      font-size: 15px;
+      font-weight: 800;
+      color: #065f46;
+      margin: 0 0 2px 0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }}
+    .report-header-left p {{
+      font-size: 10px;
+      color: #64748b;
+      margin: 0;
+      font-weight: 500;
+    }}
+    .report-header-right {{
+      text-align: right;
+    }}
+    .report-header-right h2 {{
+      font-size: 12px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0 0 2px 0;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }}
+    .patient-table {{
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 22px;
+      font-size: 11.5px;
+    }}
+    .patient-table th, .patient-table td {{
+      border: 1px solid #e2e8f0;
+      padding: 6px 10px;
+      text-align: left;
+    }}
+    .patient-table th {{
+      background-color: #f8fafc;
+      color: #64748b;
+      font-weight: 600;
+      width: 20%;
+    }}
+    .patient-table td {{
+      color: #334155;
+      font-weight: 500;
+    }}
+    .report-title-bar {{
+      font-size: 14px;
+      font-weight: 800;
+      color: #0f172a;
+      text-align: center;
+      margin: 18px 0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-top: 1px solid #e2e8f0;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 6px 0;
+    }}
+    .grid-two-cols {{
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 15px;
+    }}
+    .report-section-title {{
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 8px;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }}
+    .metric-list {{
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      font-size: 11.5px;
+    }}
+    .metric-item {{
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      border-bottom: 1px dashed #f1f5f9;
+    }}
+    .metric-label {{
+      color: #64748b;
+    }}
+    .metric-value {{
+      font-weight: 600;
+      color: #1e293b;
+    }}
+    .asymmetry-badge {{
+      font-size: 9px;
+      padding: 1px 4px;
+      border-radius: 4px;
+      background: #f1f5f9;
+      color: #475569;
+      margin-left: 4px;
+      font-weight: 700;
+    }}
+    .impression-box {{
+      background: #f8fafc;
+      border-left: 4px solid #10b981;
+      padding: 12px 15px;
+      border-radius: 4px;
+      margin: 18px 0;
+      font-size: 12px;
+    }}
+    .impression-title {{
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 4px;
+      font-size: 12.5px;
+    }}
+    .recommendations-box {{
+      font-size: 12px;
+    }}
+    .recommendations-list {{
+      margin: 6px 0 0 16px;
+      padding: 0;
+    }}
+    .recommendations-list li {{
+      margin-bottom: 4px;
+    }}
+    .risk-badge {{
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }}
+    .risk-low {{
+      background: #ecfdf5;
+      color: #065f46;
+    }}
+    .risk-medium {{
+      background: #fffbeb;
+      color: #92400e;
+    }}
+    .risk-high {{
+      background: #fef2f2;
+      color: #991b1b;
+    }}
+    .footer-sig {{
+      margin-top: 25px;
+      text-align: center;
+      font-size: 9px;
+      color: #94a3b8;
+      border-top: 1px solid #f1f5f9;
+      padding-top: 10px;
+    }}
+  </style>
 
-MRI BRAIN - QUANTITATIVE ANALYSIS REPORT
+  <!-- Header -->
+  <div class="report-header">
+    <div class="report-header-left">
+      <h1>Department of Neuroradiology</h1>
+      <p>NeuroSphere MRI Intelligence & Interventional Radiology</p>
+    </div>
+    <div class="report-header-right">
+      <h2>Automated Quantitative Analysis</h2>
+      <p style="font-size:10px;color:#64748b;margin:0;">Ref Acc: MR-ANALYTICS-V1</p>
+    </div>
+  </div>
 
-═════════════════════════════════════════════════════════════════════════════
+  <!-- Patient Table -->
+  <table class="patient-table">
+    <tr>
+      <th>PATIENT NAME</th>
+      <td>{patient_name}</td>
+      <th>STUDY DATE</th>
+      <td>{timestamp_str}</td>
+    </tr>
+    <tr>
+      <th>UHID / CASE NO</th>
+      <td>{uhid}</td>
+      <th>ACCESSION NO</th>
+      <td>{acc_no}</td>
+    </tr>
+    <tr>
+      <th>REFERRING CLINICIAN</th>
+      <td>AI Platform Engine</td>
+      <th>MODALITY</th>
+      <td>Magnetic Resonance (MR)</td>
+    </tr>
+  </table>
 
-Clinical Indication:
-    Automated quantitative analysis of brain MRI features for research and 
-    clinical correlation purposes.
+  <div class="report-title-bar">Quantitative Brain MRI Findings &amp; Biomarkers</div>
 
-═════════════════════════════════════════════════════════════════════════════
+  <p style="font-size:11.5px;color:#64748b;margin: -8px 0 18px 0;line-height:1.4;">
+    <strong>Clinical Indication:</strong> Automated 3D tissue segmentation and multi-parameter morphological feature mapping. All biomarkers calculated using standardized ANTsPy Atropos tissue modeling, Harvard-Oxford atlas transformations, and CNN regressors.
+  </p>
 
-FINDINGS:
+  <!-- Findings Grid -->
+  <div class="grid-two-cols">
+    <!-- Col 1: Volumetrics -->
+    <div>
+      <div class="report-section-title">Global Tissue Segmentation</div>
+      <ul class="metric-list" style="margin-bottom:15px;">
+        <li class="metric-item">
+          <span class="metric-label">Cerebrospinal Fluid (CSF)</span>
+          <span class="metric-value">{csf_pct:.2f}%</span>
+        </li>
+        <li class="metric-item">
+          <span class="metric-label">Gray Matter Percentage</span>
+          <span class="metric-value">{gm_pct:.2f}%</span>
+        </li>
+        <li class="metric-item">
+          <span class="metric-label">White Matter Percentage</span>
+          <span class="metric-value">{wm_pct:.2f}%</span>
+        </li>
+        <li class="metric-item">
+          <span class="metric-label">Total Brain Area Coverage</span>
+          <span class="metric-value">{brain_area_pct:.2f}%</span>
+        </li>
+      </ul>
 
-Tissue Segmentation:
-    • Cerebrospinal Fluid (CSF): {csf_pct:.2f}%
-    • Gray Matter: {gm_pct:.2f}%
-    • White Matter: {wm_pct:.2f}%
-    ▶ Tissue volumes assessed using automated quantitative methods.
+      <!-- Subcortical Volumes Section -->
+      {vols_html}
+    </div>
 
-Texture Analysis:
-    • GLCM Contrast: {contrast:.4f}
-    • GLCM Energy: {energy:.4f}
-    • GLCM Homogeneity: {homo:.4f}
-    ▶ Texture features quantified using Gray Level Co-occurrence Matrix.
+    <!-- Col 2: Textures & Morphology -->
+    <div>
+      <div class="report-section-title">Texture Biomarkers (2D GLCM)</div>
+      <ul class="metric-list" style="margin-bottom:15px;">
+        <li class="metric-item">
+          <span class="metric-label">GLCM Contrast</span>
+          <span class="metric-value">{contrast:.4f}</span>
+        </li>
+        <li class="metric-item">
+          <span class="metric-label">GLCM Energy</span>
+          <span class="metric-value">{energy:.4f}</span>
+        </li>
+        <li class="metric-item">
+          <span class="metric-label">GLCM Homogeneity</span>
+          <span class="metric-value">{homo:.4f}</span>
+        </li>
+        <li class="metric-item">
+          <span class="metric-label">Shannon Information Entropy</span>
+          <span class="metric-value">{entropy:.2f}</span>
+        </li>
+      </ul>
 
-Structural and Symmetry Metrics:
-    • Brain Volume: Within normal limits
-    • Bilateral Symmetry Index: {bilateral_sym:.4f}
-    • Brain Area Coverage: {brain_area_pct:.2f}%
-    ▶ Structural metrics evaluated for gross abnormalities and asymmetry.
+      <div class="report-section-title">Structural &amp; Morphological Metrics</div>
+      <ul class="metric-list" style="margin-bottom:15px;">
+        <li class="metric-item">
+          <span class="metric-label">Brain Solidity (Compactness)</span>
+          <span class="metric-value">{solidity:.4f}</span>
+        </li>
+        <li class="metric-item">
+          <span class="metric-label">Brain Eccentricity (Ovalness)</span>
+          <span class="metric-value">{ecc:.4f}</span>
+        </li>
+        <li class="metric-item">
+          <span class="metric-label">Ventricular Proxy Index</span>
+          <span class="metric-value">{vent_proxy:.2f}%</span>
+        </li>
+        <li class="metric-item">
+          <span class="metric-label">Bilateral Symmetry Index</span>
+          <span class="metric-value">{bilateral_sym:.4f}</span>
+        </li>
+        <li class="metric-item">
+          <span class="metric-label">Hemisphere Asymmetry Index</span>
+          <span class="metric-value">{asym:.2f}%</span>
+        </li>
+      </ul>
 
-Parenchyma:
-    • Normal gray-white matter differentiation
-    • No focal mass lesions or signal abnormalities identified
-    • No evidence of cortical dysplasia or hippocampal sclerosis
+      <div class="report-section-title">Pathology Assessment</div>
+      <ul class="metric-list">
+        <li class="metric-item" style="border-bottom:none;">
+          <span class="metric-label">Pathology Risk Level</span>
+          <span class="metric-value">
+            <span class="risk-badge risk-{risk_level.lower()}">{risk_level}</span>
+          </span>
+        </li>
+      </ul>
+    </div>
+  </div>
 
-Pathology Indicators:
-    • Risk Level: {features_dict.get("pathology_indicators", {}).get("risk_level", "LOW")}
-    • No significant pathology flags detected
+  <!-- Impression Box -->
+  <div class="impression-box">
+    <div class="impression-title">Clinical Impression &amp; AI Analysis Summary</div>
+    <p style="margin:0;line-height:1.5;">{clinical_summary}</p>
+  </div>
 
-═════════════════════════════════════════════════════════════════════════════
+  <!-- Recommendations -->
+  <div class="recommendations-box">
+    <div class="report-section-title">Recommendations</div>
+    <ul class="recommendations-list">
+      <li>Correlate quantitative MRI tissue volumes with clinical presentation and history.</li>
+      <li>Review subcortical volumes (particularly hippocampal index) in the context of cognitive scores.</li>
+      <li>Follow-up volumetric imaging may be considered in 6–12 months to trace dynamic volumetric changes.</li>
+    </ul>
+  </div>
 
-IMPRESSION:
-
-This report summarizes quantitative MRI findings for patient {patient_id}.
-
-{clinical_summary}
-
-═════════════════════════════════════════════════════════════════════════════
-
-RECOMMENDATIONS:
-
-• Clinical correlation with patient presentation and symptoms
-• Correlation with prior imaging if available
-• Neuroradiology review recommended
-• Follow-up imaging may be considered based on clinical context
-
-═════════════════════════════════════════════════════════════════════════════
-
-DISCLAIMER: This is an AI-generated research report for training/research 
-purposes only. NOT a clinical diagnosis. Must be reviewed by a qualified 
-radiologist before any clinical use.
-
-═════════════════════════════════════════════════════════════════════════════
-
-                                AI Clinical Report Generator
-                            Generated: {timestamp_str}
-                        RESEARCH/TRAINING PURPOSES ONLY - NOT FOR CLINICAL USE
-"""
-    return report
+  <!-- Disclaimer Footer -->
+  <div class="footer-sig">
+    <p style="margin:0 0 2px 0;font-weight:700;">NeuroSphere AI Research &amp; Training Report</p>
+    <p style="margin:0;font-size:8px;color:#cbd5e1;">DISCLAIMER: This is an AI-generated training/research summary. It does NOT constitute a clinical diagnosis or medical advice. Must be reviewed by a certified clinical radiologist before diagnostic use.</p>
+  </div>
+</div>"""
+    return report_html
 
 
 # =============================================================================
@@ -1073,6 +1369,10 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
                         report_content = f.read()
                 except Exception:
                     pass
+
+        # Force regeneration if the cached report is in the old text format
+        if report_content and not (report_content.startswith("<div") or "<style>" in report_content):
+            report_content = None
 
         # 3. Dynamic clinical report generation based on loaded features
         if not report_content:

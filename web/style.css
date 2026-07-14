@@ -670,7 +670,7 @@ input,select{font-family:var(--font)}
   padding:28px 36px;border-radius:10px;
   box-shadow:0 2px 16px rgba(0,0,0,.07);
   font-family:'Inter',sans-serif;font-size:13px;line-height:1.6;
-  white-space:pre-wrap;max-height:440px;overflow-y:auto;
+  max-height:440px;overflow-y:auto;
 }
 
 
