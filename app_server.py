@@ -51,10 +51,10 @@ MRIQC_THRESHOLDS = {
 }
 
 def simulate_mriqc_from_vector(vector: list) -> dict:
-    """Compute realistic MRIQC metrics from the 40-element rule-based feature vector.
+    """Compute realistic MRIQC metrics from the 61-element rule-based feature vector.
     Deterministic simulation — identical to train_regressor(2).py simulate_mriqc_metrics_from_vector."""
-    if not vector or len(vector) < 40:
-        vector = list(vector or []) + [0.0] * (40 - len(vector or []))
+    if not vector or len(vector) < 61:
+        vector = list(vector or []) + [0.0] * (61 - len(vector or []))
     mean_val  = float(vector[0])
     std_val   = float(vector[1])
     cnr_val   = float(vector[18])
@@ -271,7 +271,7 @@ def load_mri_slice(path: str) -> np.ndarray:
 
 
 def run_feature_extraction(mri_path: str):
-    """Run 40-feature extraction on NIfTI file and return structures"""
+    """Run 61-feature extraction on NIfTI file and return structures"""
     # Dynamic N4 bias correction for uploaded files to match training domain
     dir_name = os.path.dirname(mri_path)
     file_name = os.path.basename(mri_path)
@@ -1427,13 +1427,13 @@ def sanitize_nan(data):
 # =============================================================================
 
 def features_list_to_dict(filename, features):
-    """Maps the raw 40-element float list to the output schema format"""
+    """Maps the raw 61-element float list to the output schema format"""
     from train_regressor import build_structured_json
     return build_structured_json(features, filename)
 
 
 def flatten_feature_dict(d: dict) -> list:
-    """Helper to reconstruct flat 40-element list from structured predicted features dict"""
+    """Helper to reconstruct flat 61-element list from structured predicted features dict"""
     try:
         intensity = d.get("intensity_statistics", {})
         tissue = d.get("tissue_segmentation", {})
@@ -1492,6 +1492,38 @@ def flatten_feature_dict(d: dict) -> list:
             edge.get("cortical_edge_sharpness", 0.0),
             edge.get("cortical_edge_std", 0.0)
         ]
+        
+        # Volumetric stats (21 features starting at index 40)
+        vol = d.get("volumetric_statistics", {})
+        flat.extend([
+            vol.get("left_ventricle_volume_ml", 0.0),
+            vol.get("right_ventricle_volume_ml", 0.0),
+            vol.get("ventricle_asymmetry_index", 0.0),
+            
+            vol.get("left_thalamus_volume_ml", 0.0),
+            vol.get("right_thalamus_volume_ml", 0.0),
+            vol.get("thalamus_asymmetry_index", 0.0),
+            
+            vol.get("left_caudate_volume_ml", 0.0),
+            vol.get("right_caudate_volume_ml", 0.0),
+            vol.get("caudate_asymmetry_index", 0.0),
+            
+            vol.get("left_putamen_volume_ml", 0.0),
+            vol.get("right_putamen_volume_ml", 0.0),
+            vol.get("putamen_asymmetry_index", 0.0),
+            
+            vol.get("left_pallidum_volume_ml", 0.0),
+            vol.get("right_pallidum_volume_ml", 0.0),
+            vol.get("pallidum_asymmetry_index", 0.0),
+            
+            vol.get("left_hippocampus_volume_ml", 0.0),
+            vol.get("right_hippocampus_volume_ml", 0.0),
+            vol.get("hippocampus_asymmetry_index", 0.0),
+            
+            vol.get("left_amygdala_volume_ml", 0.0),
+            vol.get("right_amygdala_volume_ml", 0.0),
+            vol.get("amygdala_asymmetry_index", 0.0)
+        ])
         return flat
     except Exception as e:
         print("Reconstruct flat list failed:", e)

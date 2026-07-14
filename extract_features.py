@@ -16,6 +16,7 @@ Feature order (61 total):
   40-60: Subcortical Volumes   (21) — 3D Harvard-Oxford atlas segmentations
 """
 
+import os
 import json
 import numpy as np
 from pathlib import Path

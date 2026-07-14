@@ -102,16 +102,16 @@ Train the U-Net model using the generated ANTsPy pseudo-labels as ground truth:
 *   **Output**: `checkpoints/unet_best.pth`
 
 #### Step 4: Extract Rule-Based Features
-Extract 40 anatomical and texture metrics from the central slices of all raw MRIs to create training targets for the regressor:
+Extract 61 anatomical, texture, and volumetric metrics from all raw MRIs to create training targets for the regressor:
 ```powershell
 .\.venv\Scripts\python extract_features.py --mri-dir ixi-t1 --output rule_based_features.json
 ```
 *   **Output**: `rule_based_features.json`
 
 #### Step 5: Train Feature Regressor
-Train the regression network to predict the 40 clinical features directly from raw MRI slices:
+Train the regression network to predict the 61 clinical features directly from raw MRI slices:
 ```powershell
-.\.venv\Scripts\python train_regressor.py --mri-dir ixi-t1 --features-file rule_based_features.json --num-features 40 --epochs 100 --batch-size 32
+.\.venv\Scripts\python train_regressor.py --mri-dir ixi-t1 --features-file rule_based_features.json --num-features 61 --epochs 100 --batch-size 32
 ```
 *   **Output**: `checkpoints/regressor_best.pth`
 
@@ -142,7 +142,7 @@ This will automatically launch the dashboard in your default browser at **`http:
 ### Dashboard Capabilities:
 *   **Interactive 3D Slice Viewer**: Click through axial, coronal, and sagittal planes of any patient's T1 MRI.
 *   **Overlay segmentations**: Toggle U-Net tissue segmentations (CSF, GM, WM) directly on top of the raw scan.
-*   **Dynamic Feature Extraction**: Drag and drop any new `.nii` file to segment it, calculate its 40 structural features, and view them immediately.
+*   **Dynamic Feature Extraction**: Drag and drop any new `.nii` file to segment it, calculate its 61 structural and volumetric features, and view them immediately.
 *   **Clinical Summary**: Read the Gemini-generated medical report side-by-side with the brain model.
 *   **Official MRIQC Validation (Docker)**: Validate scan quality with official MRIQC clinical metrics by running their containerized pipeline directly from the dashboard toolbar (requires Docker Desktop).
 
@@ -157,9 +157,9 @@ To guarantee compliance with clinical literature, the dashboard features a **Doc
 
 ---
 
-## 📊 Feature Schema (40 Features)
+## 📊 Feature Schema (61 Features)
 
-The quantitative extraction script (`extract_features.py`) calculates 40 features grouped into seven categories:
+The quantitative extraction script (`extract_features.py`) calculates 61 features grouped into eight categories:
 
 1.  **Intensity Statistics (12)**: Mean, standard deviation, minimum, maximum, median, 25th percentile, 75th percentile, skewness, kurtosis, mode, bimodality, and dynamic range.
 2.  **Tissue Segmentation (7)**: csf percentage, gm percentage, wm percentage, background percentage, otsu threshold 1, otsu threshold 2, and GM/WM contrast-to-noise ratio (CNR).
@@ -168,6 +168,14 @@ The quantitative extraction script (`extract_features.py`) calculates 40 feature
 5.  **Symmetry Metrics (2)**: Bilateral symmetry score and asymmetry index %.
 6.  **Frequency Domain (3)**: Low frequency energy, high frequency energy, and frequency energy ratio.
 7.  **Edge Features (2)**: Cortical edge sharpness and standard deviation of edge sharpness.
+8.  **Subcortical Volumes (21)**: 
+    *   **Ventricles (3)**: Left/Right volume and lateralization asymmetry index.
+    *   **Thalamus (3)**: Left/Right volume and lateralization asymmetry index.
+    *   **Caudate (3)**: Left/Right volume and lateralization asymmetry index.
+    *   **Putamen (3)**: Left/Right volume and lateralization asymmetry index.
+    *   **Pallidum (3)**: Left/Right volume and lateralization asymmetry index.
+    *   **Hippocampus (3)**: Left/Right volume and lateralization asymmetry index.
+    *   **Amygdala (3)**: Left/Right volume and lateralization asymmetry index.
 
 ---
 

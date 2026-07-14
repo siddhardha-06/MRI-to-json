@@ -229,7 +229,7 @@ def train_regressor(
     num_epochs=100,
     batch_size=32,
     learning_rate=1e-3,
-    num_features=40,
+    num_features=61,
     save_dir="checkpoints",
     pretrained_backbone=None,
     limit=None,
@@ -596,7 +596,7 @@ def get_structural_details(mri_path):
 
 def simulate_mriqc_metrics_from_vector(vector) -> dict:
     """
-    Simulate realistic MRIQC metrics deterministically from a 40-element feature vector
+    Simulate realistic MRIQC metrics deterministically from a 61-element feature vector
     in case the original 3D volume is not available.
     """
     mean_val = float(vector[0])
@@ -649,9 +649,9 @@ def simulate_mriqc_metrics_from_vector(vector) -> dict:
 
 
 def build_structured_json(vector, mri_path=None):
-    """Build structured diagnostic JSON matching sample_output.json schema (updated for 40 features)"""
-    if len(vector) < 40:
-        vector = list(vector) + [0.0] * (40 - len(vector))
+    """Build structured diagnostic JSON matching sample_output.json schema (updated for 61 features)"""
+    if len(vector) < 61:
+        vector = list(vector) + [0.0] * (61 - len(vector))
         
     mriqc_metrics = None
         
@@ -802,7 +802,48 @@ def build_structured_json(vector, mri_path=None):
             "flags": flags,
             "disclaimer": "These are AI training indicators only, NOT clinical diagnoses."
         },
-        "mriqc_metrics": mriqc_metrics
+        "mriqc_metrics": mriqc_metrics,
+        "volumetric_statistics": {
+            "total_brain_volume_ml": round(float(vector[15]) / 100.0 * 1400.0, 4),
+            "gray_matter_volume_ml": round(float(vector[13]) / 100.0 * 1400.0, 4),
+            "white_matter_volume_ml": round(float(vector[14]) / 100.0 * 1400.0, 4),
+            "csf_volume_ml": round(float(vector[12]) / 100.0 * 1400.0, 4),
+            
+            "left_ventricle_volume_ml": round(float(vector[40]), 4),
+            "right_ventricle_volume_ml": round(float(vector[41]), 4),
+            "total_ventricle_volume_ml": round(float(vector[40]) + float(vector[41]), 4),
+            "ventricle_asymmetry_index": round(float(vector[42]), 4),
+            
+            "left_thalamus_volume_ml": round(float(vector[43]), 4),
+            "right_thalamus_volume_ml": round(float(vector[44]), 4),
+            "total_thalamus_volume_ml": round(float(vector[43]) + float(vector[44]), 4),
+            "thalamus_asymmetry_index": round(float(vector[45]), 4),
+            
+            "left_caudate_volume_ml": round(float(vector[46]), 4),
+            "right_caudate_volume_ml": round(float(vector[47]), 4),
+            "total_caudate_volume_ml": round(float(vector[46]) + float(vector[47]), 4),
+            "caudate_asymmetry_index": round(float(vector[48]), 4),
+            
+            "left_putamen_volume_ml": round(float(vector[49]), 4),
+            "right_putamen_volume_ml": round(float(vector[50]), 4),
+            "total_putamen_volume_ml": round(float(vector[49]) + float(vector[50]), 4),
+            "putamen_asymmetry_index": round(float(vector[51]), 4),
+            
+            "left_pallidum_volume_ml": round(float(vector[52]), 4),
+            "right_pallidum_volume_ml": round(float(vector[53]), 4),
+            "total_pallidum_volume_ml": round(float(vector[52]) + float(vector[53]), 4),
+            "pallidum_asymmetry_index": round(float(vector[54]), 4),
+            
+            "left_hippocampus_volume_ml": round(float(vector[55]), 4),
+            "right_hippocampus_volume_ml": round(float(vector[56]), 4),
+            "total_hippocampus_volume_ml": round(float(vector[55]) + float(vector[56]), 4),
+            "hippocampus_asymmetry_index": round(float(vector[57]), 4),
+            
+            "left_amygdala_volume_ml": round(float(vector[58]), 4),
+            "right_amygdala_volume_ml": round(float(vector[59]), 4),
+            "total_amygdala_volume_ml": round(float(vector[58]) + float(vector[59]), 4),
+            "amygdala_asymmetry_index": round(float(vector[60]), 4),
+        }
     }
 
 
@@ -858,7 +899,7 @@ if __name__ == "__main__":
                        help="JSON file with rule-based features (ground truth)")
     parser.add_argument("--epochs", type=int, default=100, help="Number of epochs")
     parser.add_argument("--batch-size", type=int, default=32, help="Batch size")
-    parser.add_argument("--num-features", type=int, default=40, help="Number of features to predict")
+    parser.add_argument("--num-features", type=int, default=61, help="Number of features to predict")
     parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate")
     parser.add_argument("--save-dir", default="checkpoints", help="Checkpoint directory")
     parser.add_argument("--pretrained-backbone", help="Path to pretrained autoencoder")
