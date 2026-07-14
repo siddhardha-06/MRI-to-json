@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=3">
+  <link rel="stylesheet" href="style.css?v=6">
   <script src="https://unpkg.com/@niivue/niivue@0.38.0/dist/niivue.umd.js" defer></script>
 </head>
 <body>
@@ -102,22 +102,55 @@
       </h1>
       <p class="up-sub">Upload a NIfTI brain scan and get instant automated analysis — bias correction, 40 quantitative biomarkers, tissue segmentation and 3D volumetrics.</p>
 
-      <!-- Drop zone -->
-      <div class="drop-zone-hero" id="drop-zone">
-        <div class="dz-border-ring"></div>
-        <div class="dz-inner" id="drop-zone-content">
-          <div class="dz-icon-wrap">
-            <svg class="dz-svg"><use href="#ic-upload"/></svg>
-            <div class="dz-icon-ring1"></div>
-            <div class="dz-icon-ring2"></div>
+      <!-- Main Upload Workspace -->
+      <div class="upload-workspace">
+        <!-- Drop zone -->
+        <div class="drop-zone-hero" id="drop-zone">
+          <div class="dz-border-ring"></div>
+          <div class="dz-inner" id="drop-zone-content">
+            <div class="dz-icon-wrap">
+              <svg class="dz-svg"><use href="#ic-upload"/></svg>
+              <div class="dz-icon-ring1"></div>
+              <div class="dz-icon-ring2"></div>
+            </div>
+            <h2 class="dz-title">Drop your NIfTI scan here</h2>
+            <p class="dz-sub">Accepts .nii &amp; .nii.gz — up to 2 GB</p>
+            <label class="dz-btn" for="file-input">
+              <svg style="width:16px;height:16px"><use href="#ic-upload"/></svg>
+              Browse Files
+            </label>
+            <input type="file" id="file-input" accept=".nii,.nii.gz" style="display:none">
           </div>
-          <h2 class="dz-title">Drop your NIfTI scan here</h2>
-          <p class="dz-sub">Accepts .nii &amp; .nii.gz — up to 2 GB</p>
-          <label class="dz-btn" for="file-input">
-            <svg style="width:16px;height:16px"><use href="#ic-upload"/></svg>
-            Browse Files
-          </label>
-          <input type="file" id="file-input" accept=".nii,.nii.gz" style="display:none">
+        </div>
+
+        <!-- Pipeline Settings -->
+        <div class="upload-settings">
+          <div class="settings-title">
+            <svg style="width:16px;height:16px;color:#10b981;margin-right:4px;"><use href="#ic-cpu"/></svg>
+            Pipeline Quality Settings
+          </div>
+          <div class="settings-grid">
+            <div class="setting-item">
+              <div class="setting-info">
+                <label for="toggle-run-mriqc" class="setting-label">Execute MRIQC Quality Check</label>
+                <div class="setting-desc">Assess quality metrics via MRIQC emulation / Docker</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="toggle-run-mriqc" checked>
+                <span class="slider round"></span>
+              </label>
+            </div>
+            <div class="setting-item">
+              <div class="setting-info">
+                <label for="toggle-force-continue" class="setting-label">Ignore Quality Gate Failures</label>
+                <div class="setting-desc">Continue pipeline even if scan fails clinical quality thresholds</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="toggle-force-continue">
+                <span class="slider round"></span>
+              </label>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -598,6 +631,6 @@
   </div>
 </div>
 
-<script src="app.js?v=4"></script>
+<script src="app.js?v=7"></script>
 </body>
 </html>

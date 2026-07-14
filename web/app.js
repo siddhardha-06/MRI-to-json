@@ -379,65 +379,136 @@ async function handleFileUpload(file) {
     addHeroLog(`Starting: ${stage.name}`, true);
 
     if (stage.id === "mriqc") {
-      try {
-        await fetch(`/api/mriqc/run/${uploadResult.patient_id}`, { method: 'POST' });
-        let mriqcFinished = false;
-        let lastMriqcLogCountUpload = 0;
-        while (!mriqcFinished) {
-          const res = await fetch(`/api/mriqc/status/${uploadResult.patient_id}`);
-          if (!res.ok) break;
-          const data = await res.json();
-          if (data.logs && data.logs.length > lastMriqcLogCountUpload) {
-            for (let j = lastMriqcLogCountUpload; j < data.logs.length; j++) {
-              addHeroLog(data.logs[j].trim());
-            }
-            lastMriqcLogCountUpload = data.logs.length;
-          }
-          if (data.status === "completed" || data.status === "failed" || data.status === "idle") {
-            mriqcFinished = true;
-          } else {
-            await new Promise(r => setTimeout(r, 1500));
-          }
-        }
+      const runMriqc = document.getElementById("toggle-run-mriqc") ? document.getElementById("toggle-run-mriqc").checked : true;
+      const forceContinue = document.getElementById("toggle-force-continue") ? document.getElementById("toggle-force-continue").checked : false;
 
-        // Quality Gate Check
+      if (!runMriqc) {
+        addHeroLog("MRIQC quality check bypassed by user settings.");
+        appendConsoleLog("MRIQC Quality check bypassed by user settings.");
+        await animateProgress(pFrom, pTo, 1000, i);
+        stageOutputs[stage.id] = { completed: true, label: stage.name };
+        stepperComplete(stage.id);
+      } else {
         try {
-          const qRes = await fetch(`/api/mriqc/quality-gate/${uploadResult.patient_id}`);
-          if (qRes.ok) {
-            const qData = await qRes.json();
-            if (!qData.passed) {
-              addHeroLog(`[REJECTED] Quality Check Failed: Grade ${qData.grade}`, true);
-              addHeroLog(qData.reason, true);
-              appendConsoleLog(`Scan rejected by MRIQC Quality Gate (Score: ${qData.score}/100)`, "error-msg");
+          await fetch(`/api/mriqc/run/${uploadResult.patient_id}`, { method: 'POST' });
+          let mriqcFinished = false;
+          let lastMriqcLogCountUpload = 0;
+          let elapsedSecs = 0;
+          const estimatedMriqcSecs = 900; // Accurate baseline CPU-based Docker runtime: 15 minutes (900 seconds)
+
+          while (!mriqcFinished) {
+            const res = await fetch(`/api/mriqc/status/${uploadResult.patient_id}`);
+            if (!res.ok) break;
+            const data = await res.json();
+            
+            if (data.logs && data.logs.length > lastMriqcLogCountUpload) {
+              for (let j = lastMriqcLogCountUpload; j < data.logs.length; j++) {
+                addHeroLog(data.logs[j].trim());
+              }
+              lastMriqcLogCountUpload = data.logs.length;
+            }
+            
+            if (data.status === "completed" || data.status === "failed" || data.status === "idle") {
+              mriqcFinished = true;
+            } else {
+              elapsedSecs += 1.5;
               
-              const hcirc = $(`hcirc-${stage.id}`);
-              if (hcirc) {
-                 hcirc.className = "h-circle s-done";
-                 hcirc.style.backgroundColor = "#ef4444"; // Red for rejection
-                 hcirc.innerHTML = `<svg style="width:18px;height:18px"><use href="#ic-close"/></svg>`;
+              // Get progress fraction from server or fallback to time-based estimate
+              let frac = Math.min(elapsedSecs / estimatedMriqcSecs, 0.95);
+              let remainingSecs = Math.max(1, Math.round(estimatedMriqcSecs - elapsedSecs));
+              
+              if (data.progress_pct && data.progress_pct > 0) {
+                const progFrac = data.progress_pct / 100;
+                frac = progFrac;
+                const projectedTotalSecs = elapsedSecs / progFrac;
+                
+                // Low-pass smoothing filter: blend initial CPU estimate with real-world run time projection
+                const alpha = progFrac; // progress fraction (0.02 to 1.0)
+                const smoothedTotalSecs = (1 - alpha) * estimatedMriqcSecs + alpha * projectedTotalSecs;
+                remainingSecs = Math.max(5, Math.round(smoothedTotalSecs - elapsedSecs));
               }
               
-              showCustomQualityAlert(qData.grade, qData.score, qData.reason);
-              
-              // Reset to upload screen
-              setTimeout(() => {
-                 showState(STATES.UPLOAD);
-                 setOverallPct(0);
-                 updateTimerUI(0, 0);
-              }, 1500);
-              
-              return; // Halt the pipeline entirely
-            } else {
-              addHeroLog(`[PASSED] Quality Check: Grade ${qData.grade} (${qData.score}/100)`, false);
+              // Animate progress incrementally (10% to 33%)
+              const currentPct = 10 + (23 * frac);
+              setOverallPct(currentPct);
+              setStepRingPct(frac * 100);
+
+              // Live countdown timer UI
+              const mriqcRemMs = remainingSecs * 1000 + 14000; // 14s for subsequent stages
+
+              const timerValEl = $("proc-time-value");
+              if (timerValEl) {
+                const s = Math.ceil(mriqcRemMs / 1000);
+                timerValEl.textContent = s < 60 ? `~${s}s remaining` : `~${Math.floor(s/60)}m ${s%60}s remaining`;
+              }
+
+              const elapsed = processingStartTime ? Date.now() - processingStartTime : 0;
+              const timeFill = $("proc-time-fill");
+              if (timeFill) {
+                const adjustedTotalMs = TOTAL_PROC_MS + (estimatedMriqcSecs * 1000);
+                timeFill.style.width = `${Math.min(100, (elapsed / adjustedTotalMs) * 100)}%`;
+              }
+
+              const elapsedEl = $("proc-elapsed-text");
+              if (elapsedEl) elapsedEl.textContent = `${Math.round(elapsed/1000)}s elapsed`;
+
+              await new Promise(r => setTimeout(r, 1500));
             }
           }
-        } catch (err) {
-          addHeroLog(`Quality gate error: ${err.message}`, true);
-        }
 
-        setOverallPct(pTo);
-      } catch (err) {
-        addHeroLog(`MRIQC error: ${err.message}`, true);
+          // Quality Gate Check
+          try {
+            const qRes = await fetch(`/api/mriqc/quality-gate/${uploadResult.patient_id}`);
+            if (qRes.ok) {
+              const qData = await qRes.json();
+              if (!qData.passed) {
+                if (forceContinue) {
+                  addHeroLog(`[WARNING] Quality Check Failed: Grade ${qData.grade} (${qData.score}/100)`);
+                  addHeroLog(`[WARNING] Reason: ${qData.reason}`);
+                  addHeroLog("Continuing pipeline execution as requested (Ignore Quality Gate Failures enabled).");
+                  appendConsoleLog(`Scan FAILED quality gate (Score: ${qData.score}/100) but forced to continue.`, "warning-msg");
+                  
+                  const hcirc = $(`hcirc-${stage.id}`);
+                  if (hcirc) {
+                     hcirc.className = "h-circle s-done";
+                     hcirc.style.backgroundColor = "#fb923c"; // Orange for warning/forced-pass
+                     hcirc.innerHTML = `<svg style="width:18px;height:18px"><use href="#ic-info"/></svg>`;
+                  }
+                } else {
+                  addHeroLog(`[REJECTED] Quality Check Failed: Grade ${qData.grade}`, true);
+                  addHeroLog(qData.reason, true);
+                  appendConsoleLog(`Scan rejected by MRIQC Quality Gate (Score: ${qData.score}/100)`, "error-msg");
+                  
+                  const hcirc = $(`hcirc-${stage.id}`);
+                  if (hcirc) {
+                     hcirc.className = "h-circle s-done";
+                     hcirc.style.backgroundColor = "#ef4444"; // Red for rejection
+                     hcirc.innerHTML = `<svg style="width:18px;height:18px"><use href="#ic-close"/></svg>`;
+                  }
+                  
+                  showCustomQualityAlert(qData.grade, qData.score, qData.reason);
+                  
+                  // Reset to upload screen
+                  setTimeout(() => {
+                     showState(STATES.UPLOAD);
+                     setOverallPct(0);
+                     updateTimerUI(0, 0);
+                  }, 1500);
+                  
+                  return; // Halt the pipeline entirely
+                }
+              } else {
+                addHeroLog(`[PASSED] Quality Check: Grade ${qData.grade} (${qData.score}/100)`, false);
+              }
+            }
+          } catch (err) {
+            addHeroLog(`Quality gate error: ${err.message}`, true);
+          }
+
+          setOverallPct(pTo);
+        } catch (err) {
+          addHeroLog(`MRIQC error: ${err.message}`, true);
+        }
       }
     } else {
       await animateProgress(pFrom, pTo, stage.duration, i);

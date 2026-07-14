@@ -114,9 +114,10 @@ def compute_mriqc_quality_score(metrics: dict) -> dict:
 
 def run_official_mriqc_thread(patient_id, mri_path):
     global mriqc_jobs
-    job = mriqc_jobs.setdefault(patient_id, {"status": "idle", "logs": [], "progress": ""})
+    job = mriqc_jobs.setdefault(patient_id, {"status": "idle", "logs": [], "progress": "", "progress_pct": 0})
     job["status"] = "running"
     job["progress"] = "Preparing BIDS directory..."
+    job["progress_pct"] = 2
     job["logs"] = ["Initializing official MRIQC pipeline...\n"]
 
     bids_temp_dir = os.path.join(WORKSPACE_DIR, "uploads", "bids_temp")
@@ -174,6 +175,24 @@ def run_official_mriqc_thread(patient_id, mri_path):
                 break
             decoded = line.decode('utf-8', errors='ignore')
             job["logs"].append(decoded)
+            
+            # Parse output dynamically to estimate progress percentage
+            decoded_lower = decoded.lower()
+            if "validator" in decoded_lower or "bids" in decoded_lower:
+                job["progress_pct"] = 5
+                job["progress"] = "Validating BIDS dataset structure..."
+            elif "anat_preproc" in decoded_lower or "preproc" in decoded_lower or "headmask" in decoded_lower or "skull" in decoded_lower:
+                job["progress_pct"] = 35
+                job["progress"] = "Running anatomical skull-stripping & bias correction..."
+            elif "spatial" in decoded_lower or "normalization" in decoded_lower or "registration" in decoded_lower:
+                job["progress_pct"] = 55
+                job["progress"] = "Registering brain to MNI152 template space..."
+            elif "iqms" in decoded_lower or "measures" in decoded_lower or "compute" in decoded_lower or "features" in decoded_lower:
+                job["progress_pct"] = 75
+                job["progress"] = "Computing Image Quality Metrics (IQMs)..."
+            elif "report" in decoded_lower or "writing" in decoded_lower or "html" in decoded_lower:
+                job["progress_pct"] = 90
+                job["progress"] = "Generating static HTML visualization report..."
 
         proc.wait()
 
@@ -223,6 +242,7 @@ def run_official_mriqc_thread(patient_id, mri_path):
 
         job["status"] = "completed"
         job["progress"] = "Official MRIQC complete!"
+        job["progress_pct"] = 100
 
     except FileNotFoundError:
         # Docker not installed — explicitly fail so quality gate catches it
@@ -850,7 +870,12 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
             # Dynamic on-the-fly rule-based feature extraction for uploads!
             cache_file = os.path.join(scan_dir, "features.json")
             
-            if os.path.exists(cache_file):
+            # Ensure the segmentation mask file also exists, otherwise recalculate it
+            seg_nii = os.path.join(scan_dir, f"{patient_id}_seg.nii")
+            seg_nii_gz = os.path.join(scan_dir, f"{patient_id}_seg.nii.gz")
+            has_seg = os.path.exists(seg_nii) or os.path.exists(seg_nii_gz)
+            
+            if os.path.exists(cache_file) and has_seg:
                 try:
                     with open(cache_file, 'r') as f:
                         feature_data = json.load(f)
@@ -1567,7 +1592,9 @@ def download_volumetric_templates():
             print("[INFO] Downloading MNI152 2mm T1 template brain (from HCP pipelines)...")
             try:
                 url = "https://github.com/Washington-University/HCPpipelines/raw/master/global/templates/MNI152_T1_2mm.nii.gz"
-                urllib.request.urlretrieve(url, template_path)
+                req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+                with urllib.request.urlopen(req) as response, open(template_path, 'wb') as out_file:
+                    out_file.write(response.read())
                 print("[INFO] MNI152 template downloaded successfully.")
             except Exception as e:
                 print(f"[ERROR] Failed to download template: {e}")

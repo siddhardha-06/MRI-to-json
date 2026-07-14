@@ -102,6 +102,11 @@
             transition: border-color 0.2s;
         }
 
+        select option {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+        }
+
         select:focus {
             border-color: var(--color-cyan);
         }
@@ -324,6 +329,21 @@
                             opacity: parseFloat(sliderOverlay.value) / 10,
                             visible: true
                         });
+                    } else {
+                        // Disable overlay control if no mask is present
+                        if (sliderOverlay) {
+                            sliderOverlay.disabled = true;
+                            sliderOverlay.style.opacity = "0.3";
+                            sliderOverlay.style.cursor = "not-allowed";
+                        }
+                        // Update label text
+                        const labels = document.querySelectorAll('.control-label');
+                        labels.forEach(l => {
+                            if (l.textContent === "Overlay") {
+                                l.textContent = "Overlay (None)";
+                                l.style.color = "rgba(255, 255, 255, 0.25)";
+                            }
+                        });
                     }
 
                     // 4. Load the volumes into NiiVue WebGL
@@ -372,6 +392,7 @@
                     const val = parseFloat(e.target.value) / 10;
                     if (nvInstance.volumes.length > 0) {
                         nvInstance.setOpacity(0, val);
+                        nvInstance.drawScene();
                     }
                 });
 
@@ -380,6 +401,7 @@
                     const val = parseFloat(e.target.value) / 10;
                     if (nvInstance.volumes.length > 1) {
                         nvInstance.setOpacity(1, val);
+                        nvInstance.drawScene();
                     }
                 });
             }

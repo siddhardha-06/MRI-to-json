@@ -135,7 +135,7 @@ input,select{font-family:var(--font)}
 }
 .upload-page{
   position:relative;z-index:2;
-  max-width:760px;
+  max-width:900px;
   width:100%;
   margin:0 auto;
   padding:52px 24px 60px;
@@ -973,4 +973,178 @@ input,select{font-family:var(--font)}
     font-weight: 700;
     color: var(--text-primary);
     letter-spacing: -0.03em;
+}
+
+/* =============================================================================
+   Pipeline Settings & Toggle Switch
+   ============================================================================= */
+.upload-settings {
+  width: 100%;
+  border-radius: 20px;
+  background: #ffffff;
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--sh-md);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  z-index: 10;
+}
+
+.settings-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--t1);
+  letter-spacing: -0.2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--border-soft);
+  padding-bottom: 12px;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 640px) {
+  .settings-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+}
+
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  background: var(--bg-sidebar);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.setting-item:hover {
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.setting-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.setting-label {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--t1);
+  cursor: pointer;
+}
+
+.setting-desc {
+  font-size: 11px;
+  color: var(--t3);
+  line-height: 1.4;
+}
+
+/* The switch - the box around the slider */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+/* Hide default HTML checkbox */
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* The slider */
+.slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: #cbd5e1;
+  transition: .3s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .3s;
+}
+
+input:checked + .slider {
+  background-color: var(--g1);
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px var(--g1);
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+/* Rounded sliders */
+.slider.round {
+  border-radius: 24px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+/* =============================================================================
+   Pipeline Settings Side-by-Side Layout
+   ============================================================================= */
+.upload-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .upload-workspace {
+    flex-direction: row;
+    align-items: stretch;
+  }
+  .drop-zone-hero {
+    flex: 1.2; /* slightly wider than settings */
+    display: flex;
+    flex-direction: column;
+  }
+  .dz-inner {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .upload-settings {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .settings-grid {
+    grid-template-columns: 1fr !important; /* Stack settings vertically on desktop */
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+  }
 }
