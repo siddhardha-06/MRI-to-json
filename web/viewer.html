@@ -1,11 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D NiiVue Brain Visualizer</title>
     <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
     <!-- NiiVue CDN UMD build -->
     <script src="https://unpkg.com/@niivue/niivue@0.38.0/dist/niivue.umd.js"></script>
     <style>
@@ -28,7 +31,8 @@
             padding: 0;
         }
 
-        body, html {
+        body,
+        html {
             width: 100%;
             height: 100%;
             overflow: hidden;
@@ -183,7 +187,9 @@
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         /* Responsive */
@@ -195,6 +201,7 @@
                 gap: 12px;
                 top: 10px;
             }
+
             .toolbar-title {
                 border-right: none;
                 padding-right: 0;
@@ -204,6 +211,7 @@
         }
     </style>
 </head>
+
 <body>
 
     <!-- Loading Screen -->
@@ -215,7 +223,7 @@
     <!-- Floating Top Control Toolbar -->
     <div class="viewer-toolbar">
         <div class="toolbar-title" id="scan-title">NeuroSphere 3D</div>
-        
+
         <div class="control-group">
             <label class="control-label" for="select-view">View</label>
             <select id="select-view">
@@ -293,24 +301,24 @@
                     if (!data.mri_url) {
                         throw new Error("No 3D volume URL found in server response");
                     }
-                    
+
                     loaderText.textContent = "Loading 3D WebGL context...";
-                    
+
                     // 3. Initialize NiiVue
                     nvInstance = new niivue.Niivue({
                         show3Dcrosshair: true,
                         backColor: [0.051, 0.067, 0.09, 1.0], // Dark navy #0d1117
                         crosshairColor: [1.0, 0.427, 0.698, 0.9], // Pink crosshair #ff6db2
                     });
-                    
+
                     nvInstance.attachTo("gl-canvas");
-                    
+
                     // Show both 3D volume and multiplanar slices combined by default
                     nvInstance.opts.multiplanarForceRender = true;
-                    
+
                     // Setup UI event listeners
                     setupControls();
-                    
+
                     loaderText.textContent = "Streaming NIfTI volumes (this may take a few seconds)...";
 
                     const volumes = [
@@ -408,4 +416,5 @@
         });
     </script>
 </body>
+
 </html>
