@@ -39,8 +39,8 @@ const MANUAL_STEPS = {
   1:{ title:"Step 1 – Pseudo-Label Generation",  desc:"ANTsPy Atropos segmentation to generate tissue pseudo-labels for all scans in the selected source." },
   2:{ title:"Step 2 – Autoencoder Training",     desc:"Self-supervised training to learn compact latent representations of MRI slices."                     },
   3:{ title:"Step 3 – U-Net Segmentation",       desc:"Trains a 2D U-Net model using pseudo-labels to predict tissue segmentation masks."                   },
-  4:{ title:"Step 4 – Regressor Training",       desc:"Trains a feature regressor on 40-dimensional feature vectors against rule-based ground truth."        },
-  5:{ title:"Step 5 – Feature Extraction",       desc:"Extracts 40-dimensional feature vectors for all scans and writes them to JSON output files."          },
+  4:{ title:"Step 4 – Regressor Training",       desc:"Trains a feature regressor on 61-dimensional feature vectors against rule-based ground truth."        },
+  5:{ title:"Step 5 – Feature Extraction",       desc:"Extracts 61-dimensional feature vectors for all scans and writes them to JSON output files."          },
   6:{ title:"Step 6 – Report Generation",        desc:"Generates structured Gemini AI clinical reports from extracted MRI features."                         },
 };
 
@@ -61,6 +61,13 @@ const FEATURE_NAMES = [
   "Bilateral Symmetry Score","Hemisphere Asymmetry Index %",
   "Low Frequency Energy","High Frequency Energy","Frequency Energy Ratio",
   "Cortical Edge Sharpness","Cortical Edge Std",
+  "L Lateral Ventricle Volume (mL)", "R Lateral Ventricle Volume (mL)", "Ventricle Asymmetry Index %",
+  "L Thalamus Volume (mL)", "R Thalamus Volume (mL)", "Thalamus Asymmetry Index %",
+  "L Caudate Volume (mL)", "R Caudate Volume (mL)", "Caudate Asymmetry Index %",
+  "L Putamen Volume (mL)", "R Putamen Volume (mL)", "Putamen Asymmetry Index %",
+  "L Pallidum Volume (mL)", "R Pallidum Volume (mL)", "Pallidum Asymmetry Index %",
+  "L Hippocampus Volume (mL)", "R Hippocampus Volume (mL)", "Hippocampus Asymmetry Index %",
+  "L Amygdala Volume (mL)", "R Amygdala Volume (mL)", "Amygdala Asymmetry Index %"
 ];
 
 // ── DOM shortcuts ─────────────────────────────────────────────────
@@ -653,15 +660,30 @@ function openStageDrawer(stage) {
     if (v) {
       appendDrawerSection(bodyEl, "Volumetric Analysis Output");
       const grid = appendStatGrid(bodyEl);
-      appendStatCard(grid, "Total Brain Volume", v.total_brain_volume_ml.toFixed(1),       "mL", true);
-      appendStatCard(grid, "Gray Matter",         v.gray_matter_volume_ml.toFixed(1),       "mL", false);
-      appendStatCard(grid, "White Matter",        v.white_matter_volume_ml.toFixed(1),      "mL", false);
-      appendStatCard(grid, "CSF Volume",          v.csf_volume_ml.toFixed(1),               "mL", true);
-      appendStatCard(grid, "Left Hippocampus",    v.left_hippocampus_volume_ml.toFixed(3),  "mL", false);
-      appendStatCard(grid, "Right Hippocampus",   v.right_hippocampus_volume_ml.toFixed(3), "mL", false);
-      if (v.hippocampus_asymmetry_index !== undefined) {
-        appendStatCard(grid, "Hippo Asymmetry",   v.hippocampus_asymmetry_index.toFixed(2), "%", true);
-      }
+      appendStatCard(grid, "Total Brain Volume", v.total_brain_volume_ml?.toFixed(1) || "0.0",       "mL", true);
+      appendStatCard(grid, "Gray Matter",         v.gray_matter_volume_ml?.toFixed(1) || "0.0",       "mL", false);
+      appendStatCard(grid, "White Matter",        v.white_matter_volume_ml?.toFixed(1) || "0.0",      "mL", false);
+      appendStatCard(grid, "CSF Volume",          v.csf_volume_ml?.toFixed(1) || "0.0",               "mL", true);
+      
+      const addBilateralCards = (name, prefix, leftKey, rightKey, aiKey) => {
+        if (v[leftKey] !== undefined) {
+          appendStatCard(grid, `L ${prefix}`, v[leftKey].toFixed(3), "mL", false);
+        }
+        if (v[rightKey] !== undefined) {
+          appendStatCard(grid, `R ${prefix}`, v[rightKey].toFixed(3), "mL", false);
+        }
+        if (v[aiKey] !== undefined) {
+          appendStatCard(grid, `${prefix} Asym`, v[aiKey].toFixed(2), "%", true);
+        }
+      };
+
+      addBilateralCards("Lateral Ventricle", "Ventricle", "left_ventricle_volume_ml", "right_ventricle_volume_ml", "ventricle_asymmetry_index");
+      addBilateralCards("Thalamus", "Thalamus", "left_thalamus_volume_ml", "right_thalamus_volume_ml", "thalamus_asymmetry_index");
+      addBilateralCards("Caudate", "Caudate", "left_caudate_volume_ml", "right_caudate_volume_ml", "caudate_asymmetry_index");
+      addBilateralCards("Putamen", "Putamen", "left_putamen_volume_ml", "right_putamen_volume_ml", "putamen_asymmetry_index");
+      addBilateralCards("Pallidum", "Pallidum", "left_pallidum_volume_ml", "right_pallidum_volume_ml", "pallidum_asymmetry_index");
+      addBilateralCards("Hippocampus", "Hippo", "left_hippocampus_volume_ml", "right_hippocampus_volume_ml", "hippocampus_asymmetry_index");
+      addBilateralCards("Amygdala", "Amygdala", "left_amygdala_volume_ml", "right_amygdala_volume_ml", "amygdala_asymmetry_index");
     }
   }
 

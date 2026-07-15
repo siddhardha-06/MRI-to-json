@@ -623,15 +623,34 @@ def build_clinical_report(patient_id: str, features_dict: dict) -> str:
     vols_html = ""
     if has_vols:
         tbv = vol_stats.get("total_brain_volume_ml", 0)
-        lh = vol_stats.get("left_hippocampus_volume_ml", 0)
-        rh = vol_stats.get("right_hippocampus_volume_ml", 0)
-        h_asym = vol_stats.get("hippocampus_asymmetry_index", 0)
-        tv = vol_stats.get("total_ventricle_volume_ml", 0)
-        v_asym = vol_stats.get("ventricle_asymmetry_index", 0)
-        tt = vol_stats.get("total_thalamus_volume_ml", 0)
-        t_asym = vol_stats.get("thalamus_asymmetry_index", 0)
-        tc = vol_stats.get("total_caudate_volume_ml", 0)
-        tp = vol_stats.get("total_putamen_volume_ml", 0)
+        
+        l_vent = vol_stats.get("left_ventricle_volume_ml", 0)
+        r_vent = vol_stats.get("right_ventricle_volume_ml", 0)
+        vent_asym = vol_stats.get("ventricle_asymmetry_index", 0)
+        
+        l_thal = vol_stats.get("left_thalamus_volume_ml", 0)
+        r_thal = vol_stats.get("right_thalamus_volume_ml", 0)
+        thal_asym = vol_stats.get("thalamus_asymmetry_index", 0)
+        
+        l_caud = vol_stats.get("left_caudate_volume_ml", 0)
+        r_caud = vol_stats.get("right_caudate_volume_ml", 0)
+        caud_asym = vol_stats.get("caudate_asymmetry_index", 0)
+        
+        l_puta = vol_stats.get("left_putamen_volume_ml", 0)
+        r_puta = vol_stats.get("right_putamen_volume_ml", 0)
+        puta_asym = vol_stats.get("putamen_asymmetry_index", 0)
+        
+        l_pall = vol_stats.get("left_pallidum_volume_ml", 0)
+        r_pall = vol_stats.get("right_pallidum_volume_ml", 0)
+        pall_asym = vol_stats.get("pallidum_asymmetry_index", 0)
+        
+        l_hippo = vol_stats.get("left_hippocampus_volume_ml", 0)
+        r_hippo = vol_stats.get("right_hippocampus_volume_ml", 0)
+        hippo_asym = vol_stats.get("hippocampus_asymmetry_index", 0)
+        
+        l_amyg = vol_stats.get("left_amygdala_volume_ml", 0)
+        r_amyg = vol_stats.get("right_amygdala_volume_ml", 0)
+        amyg_asym = vol_stats.get("amygdala_asymmetry_index", 0)
         
         vols_html = f"""
         <div class="report-section-title">Subcortical Volumetrics (3D Atlas-Based)</div>
@@ -641,20 +660,32 @@ def build_clinical_report(patient_id: str, features_dict: dict) -> str:
             <span class="metric-value">{tbv:,.2f} mL</span>
           </li>
           <li class="metric-item">
-            <span class="metric-label">Total Ventricular Volume</span>
-            <span class="metric-value">{tv:.2f} mL <span class="asymmetry-badge">Asym: {v_asym:.1f}%</span></span>
+            <span class="metric-label">Lateral Ventricles (Left / Right)</span>
+            <span class="metric-value">{l_vent:.2f} mL / {r_vent:.2f} mL <span class="asymmetry-badge">Asym: {vent_asym:.1f}%</span></span>
+          </li>
+          <li class="metric-item">
+            <span class="metric-label">Thalamus (Left / Right)</span>
+            <span class="metric-value">{l_thal:.2f} mL / {r_thal:.2f} mL <span class="asymmetry-badge">Asym: {thal_asym:.1f}%</span></span>
+          </li>
+          <li class="metric-item">
+            <span class="metric-label">Caudate (Left / Right)</span>
+            <span class="metric-value">{l_caud:.2f} mL / {r_caud:.2f} mL <span class="asymmetry-badge">Asym: {caud_asym:.1f}%</span></span>
+          </li>
+          <li class="metric-item">
+            <span class="metric-label">Putamen (Left / Right)</span>
+            <span class="metric-value">{l_puta:.2f} mL / {r_puta:.2f} mL <span class="asymmetry-badge">Asym: {puta_asym:.1f}%</span></span>
+          </li>
+          <li class="metric-item">
+            <span class="metric-label">Pallidum (Left / Right)</span>
+            <span class="metric-value">{l_pall:.2f} mL / {r_pall:.2f} mL <span class="asymmetry-badge">Asym: {pall_asym:.1f}%</span></span>
           </li>
           <li class="metric-item">
             <span class="metric-label">Hippocampus (Left / Right)</span>
-            <span class="metric-value">{lh:.2f} mL / {rh:.2f} mL <span class="asymmetry-badge">Asym: {h_asym:.1f}%</span></span>
+            <span class="metric-value">{l_hippo:.2f} mL / {r_hippo:.2f} mL <span class="asymmetry-badge">Asym: {hippo_asym:.1f}%</span></span>
           </li>
           <li class="metric-item">
-            <span class="metric-label">Thalamus Volume</span>
-            <span class="metric-value">{tt:.2f} mL <span class="asymmetry-badge">Asym: {t_asym:.1f}%</span></span>
-          </li>
-          <li class="metric-item">
-            <span class="metric-label">Caudate / Putamen Volumes</span>
-            <span class="metric-value">{tc:.2f} mL / {tp:.2f} mL</span>
+            <span class="metric-label">Amygdala (Left / Right)</span>
+            <span class="metric-value">{l_amyg:.2f} mL / {r_amyg:.2f} mL <span class="asymmetry-badge">Asym: {amyg_asym:.1f}%</span></span>
           </li>
         </ul>
         """
@@ -1154,7 +1185,7 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
         
         # Check if patient is inside uploads
         scan_dir = os.path.join(UPLOADS_DIR, patient_id)
-        nii_files = list(pathlib.Path(scan_dir).glob("*.nii"))
+        nii_files = list(pathlib.Path(scan_dir).glob("*.nii")) + list(pathlib.Path(scan_dir).glob("*.nii.gz"))
         
         feature_data = None
         rule_based_vector = None
@@ -1176,6 +1207,7 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
                     with open(cache_file, 'r') as f:
                         feature_data = json.load(f)
                         rule_based_vector = feature_data.get("rule_based_array")
+                        predicted_vector = feature_data.get("predicted_array")
                 except Exception:
                     pass
             
@@ -1204,18 +1236,28 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
                     # Add MRIQC metrics if available
                     if extraction_results.get("mriqc_metrics") is not None:
                         feature_data["mriqc_metrics"] = extraction_results["mriqc_metrics"]
-
-                    # Cache it
-                    cache_payload = feature_data.copy()
-                    cache_payload["rule_based_array"] = rule_based_vector
-                    temp_cache_file = cache_file + ".tmp"
-                    with open(temp_cache_file, 'w') as f:
-                        json.dump(cache_payload, f, indent=2)
-                    os.replace(temp_cache_file, cache_file)
                         
                 except Exception as e:
                     self.send_error(500, f"On-the-fly extraction failed: {str(e)}")
                     return
+
+            # Compute predictions on-the-fly if not cached
+            if feature_data and not predicted_vector:
+                try:
+                    nii_path = str(nii_files[0])
+                    predicted_vector = get_regressor_predictions(nii_path)
+                    if predicted_vector:
+                        # Save both to cache
+                        cache_payload = feature_data.copy()
+                        cache_payload["rule_based_array"] = rule_based_vector
+                        cache_payload["predicted_array"] = predicted_vector
+                        temp_cache_file = cache_file + ".tmp"
+                        with open(temp_cache_file, 'w') as f:
+                            json.dump(cache_payload, f, indent=2)
+                        os.replace(temp_cache_file, cache_file)
+                except Exception as e:
+                    print(f"[WARNING] On-the-fly prediction failed for upload scan {patient_id}: {e}")
+
         else:
             # Load precomputed dataset patient
             if os.path.exists(FEATURES_FILE):
@@ -1276,6 +1318,23 @@ class DashboardAPIHandler(http.server.SimpleHTTPRequestHandler):
             if feature_data:
                 predicted_vector = flatten_feature_dict(feature_data)
                 
+            # If predicted_vector has only 40 features or is missing, compute new regressor predictions on-the-fly!
+            if feature_data and (not predicted_vector or len(predicted_vector) < 61):
+                try:
+                    prefix = "-".join(patient_id.split("-")[:3])
+                    dataset_dir = os.path.join(WORKSPACE_DIR, "ixi-t1")
+                    mri_files = list(pathlib.Path(dataset_dir).rglob("*.nii")) + list(pathlib.Path(dataset_dir).rglob("*.nii.gz"))
+                    dataset_mri_path = None
+                    for f in mri_files:
+                        if f.is_file() and f.name.startswith(prefix):
+                            dataset_mri_path = str(f)
+                            break
+                    if dataset_mri_path:
+                        print(f"Computing new 61-feature predictions on-the-fly for dataset scan {patient_id}...")
+                        predicted_vector = get_regressor_predictions(dataset_mri_path)
+                except Exception as e:
+                    print(f"[WARNING] On-the-fly prediction failed for dataset scan {patient_id}: {e}")
+
             # Retrieve rule-based vector from rule_based_features.json
             if os.path.exists(RULE_FEATURES_FILE):
                 try:
@@ -1745,6 +1804,54 @@ def sanitize_nan(data):
         if math.isnan(data) or math.isinf(data):
             return None
     return data
+
+
+# Global regressor model cache for on-the-fly inference
+regressor_model = None
+regressor_stats = None
+
+def get_regressor_predictions(mri_path):
+    """Load regressor model and make predictions on the given MRI scan on-the-fly"""
+    global regressor_model, regressor_stats
+    checkpoint_path = os.path.join(CHECKPOINTS_DIR, "regressor_best.pth")
+    if not os.path.exists(checkpoint_path):
+        print(f"[WARNING] Regressor checkpoint not found at {checkpoint_path}. Cannot predict.")
+        return None
+
+    try:
+        import torch
+        from train_regressor import FeatureRegressorCNN, predict_features_from_mri
+        
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        
+        # Load model and stats if not cached
+        if regressor_model is None:
+            checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=True)
+            num_features = checkpoint.get("num_features", 61)
+            
+            model = FeatureRegressorCNN(input_channels=1, num_features=num_features).to(device)
+            model.load_state_dict(checkpoint["model_state"])
+            model.eval()
+            
+            regressor_model = model
+            regressor_stats = {
+                "mean": np.array(checkpoint["feature_mean"], dtype=np.float32),
+                "std": np.array(checkpoint["feature_std"], dtype=np.float32)
+            }
+            print(f"[SUCCESS] Loaded regressor model from {checkpoint_path} for on-the-fly inference.")
+            
+        # Run prediction
+        features_pred = predict_features_from_mri(
+            regressor_model, mri_path, 
+            regressor_stats["mean"], regressor_stats["std"], 
+            device
+        )
+        return features_pred
+    except Exception as e:
+        print(f"[WARNING] Regressor inference failed for {mri_path}: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
 
 
 # =============================================================================

@@ -69,6 +69,45 @@ def format_clinical_report(patient_id: str, features: dict, clinical_summary: st
     report_date = timestamp.strftime("%d-%b-%Y %H:%M:%S %p")
     study_time = timestamp.strftime("%d-%b-%Y %H:%M:%S %p")
     
+    # Extract subcortical volumetric features
+    vol_stats = features.get("volumetric_statistics", {})
+    vols_txt = ""
+    if vol_stats:
+        tbv = vol_stats.get("total_brain_volume_ml", 0)
+        l_vent = vol_stats.get("left_ventricle_volume_ml", 0)
+        r_vent = vol_stats.get("right_ventricle_volume_ml", 0)
+        vent_asym = vol_stats.get("ventricle_asymmetry_index", 0)
+        l_thal = vol_stats.get("left_thalamus_volume_ml", 0)
+        r_thal = vol_stats.get("right_thalamus_volume_ml", 0)
+        thal_asym = vol_stats.get("thalamus_asymmetry_index", 0)
+        l_caud = vol_stats.get("left_caudate_volume_ml", 0)
+        r_caud = vol_stats.get("right_caudate_volume_ml", 0)
+        caud_asym = vol_stats.get("caudate_asymmetry_index", 0)
+        l_puta = vol_stats.get("left_putamen_volume_ml", 0)
+        r_puta = vol_stats.get("right_putamen_volume_ml", 0)
+        puta_asym = vol_stats.get("putamen_asymmetry_index", 0)
+        l_pall = vol_stats.get("left_pallidum_volume_ml", 0)
+        r_pall = vol_stats.get("right_pallidum_volume_ml", 0)
+        pall_asym = vol_stats.get("pallidum_asymmetry_index", 0)
+        l_hippo = vol_stats.get("left_hippocampus_volume_ml", 0)
+        r_hippo = vol_stats.get("right_hippocampus_volume_ml", 0)
+        hippo_asym = vol_stats.get("hippocampus_asymmetry_index", 0)
+        l_amyg = vol_stats.get("left_amygdala_volume_ml", 0)
+        r_amyg = vol_stats.get("right_amygdala_volume_ml", 0)
+        amyg_asym = vol_stats.get("amygdala_asymmetry_index", 0)
+        
+        vols_txt = f"""
+Subcortical Volumetrics:
+    • Total Brain Volume (TBV): {tbv:,.2f} mL
+    • Lateral Ventricles: Left {l_vent:.2f} mL / Right {r_vent:.2f} mL (Asymmetry: {vent_asym:.2f}%)
+    • Thalamus: Left {l_thal:.2f} mL / Right {r_thal:.2f} mL (Asymmetry: {thal_asym:.2f}%)
+    • Caudate: Left {l_caud:.2f} mL / Right {r_caud:.2f} mL (Asymmetry: {caud_asym:.2f}%)
+    • Putamen: Left {l_puta:.2f} mL / Right {r_puta:.2f} mL (Asymmetry: {puta_asym:.2f}%)
+    • Pallidum: Left {l_pall:.2f} mL / Right {r_pall:.2f} mL (Asymmetry: {pall_asym:.2f}%)
+    • Hippocampus: Left {l_hippo:.2f} mL / Right {r_hippo:.2f} mL (Asymmetry: {hippo_asym:.2f}%)
+    • Amygdala: Left {l_amyg:.2f} mL / Right {r_amyg:.2f} mL (Asymmetry: {amyg_asym:.2f}%)
+"""
+
     # Build the formatted report
     report = f"""DEPARTMENT OF CLINICAL IMAGING & INTERVENTIONAL RADIOLOGY
 
@@ -121,7 +160,7 @@ Frequency & Edge Sharpness Analysis:
     • FFT Energy Ratio: {freq_ratio:.4f}
     • Cortical Edge Sharpness: {edge_sharpness:.4f} (std: {edge_std:.4f})
     ▶ Frequency and edge profiles analyze structural transitions and signal complexity.
-
+{vols_txt}
 Parenchyma:
     • Normal gray-white matter differentiation
     • No focal mass lesions or signal abnormalities identified
