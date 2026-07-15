@@ -1,0 +1,51 @@
+# Python cache
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+
+# Large dataset files (NOT needed in the image)
+ixi-t1/
+ixi-t1-masks/
+*.nii
+*.nii.gz
+
+# Runtime output dirs (will be Docker volumes)
+uploads/
+uploads-masks/
+features/
+reports/
+
+# Large JSON outputs
+predicted_features.json
+rule_based_features.json
+rule_based_features_old.json
+
+# Logs
+*.log
+server.log
+
+# Docs (not needed at runtime)
+*.md
+*.docx
+
+# Training scripts (not needed to run the server)
+# train_autoencoder.py
+# train_regressor.py
+# train_unet.py
+validate_models.py
+validate_features.py
+verify_patient_mri.py
+check_cuda.py
+demo_report.py

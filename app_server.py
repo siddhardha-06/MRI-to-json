@@ -2027,14 +2027,15 @@ def start_server():
         print(f" Press Ctrl+C to terminate the server process.")
         print(f"==================================================\n")
         
-        # Open in web browser
-        def open_browser():
-            time.sleep(1.2)
-            webbrowser.open(f"http://localhost:{PORT}")
-            
-        t = threading.Thread(target=open_browser)
-        t.daemon = True
-        t.start()
+        # Open in web browser (skipped when running inside Docker)
+        if not os.environ.get("DOCKER_ENV"):
+            def open_browser():
+                time.sleep(1.2)
+                webbrowser.open(f"http://localhost:{PORT}")
+
+            t = threading.Thread(target=open_browser)
+            t.daemon = True
+            t.start()
         
         try:
             httpd.serve_forever()

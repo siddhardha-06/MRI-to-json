@@ -175,7 +175,7 @@ input,select{font-family:var(--font)}
 .up-sub{
   text-align:center;
   font-size:15px;
-  color:var(--dk-sub);
+  color:var(--g1);
   max-width:560px;
   line-height:1.7;
 }

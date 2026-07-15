@@ -1,0 +1,26 @@
+version: "3.9"
+
+services:
+  mri-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mri-pipeline:latest
+    container_name: mri-pipeline
+    ports:
+      - "8000:8000"
+    environment:
+      - DOCKER_ENV=1 # Disables webbrowser.open() inside the container
+    volumes:
+      # Persist user uploads and generated outputs across restarts
+      - ./uploads:/app/uploads
+      - ./uploads-masks:/app/uploads-masks
+      - ./features:/app/features
+      - ./reports:/app/reports
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000')" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
