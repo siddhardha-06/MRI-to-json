@@ -367,41 +367,112 @@ def run_feature_extraction(mri_path: str):
             template = load_mri_ants_local(template_path)
             labels = load_mri_ants_local(labels_path)
             
-            # Atropos tissue segmentation
-            arr_3d = patient.numpy()
-            p1 = float(np.percentile(arr_3d, 1))
-            p99 = float(np.percentile(arr_3d, 99))
-            arr_norm = np.clip(arr_3d, p1, p99)
-            arr_norm = (arr_norm - p1) / (p99 - p1 + 1e-5)
-            
-            brain_seeds = arr_norm > 0.18
-            from skimage.morphology import disk, closing as sk_closing, dilation as sk_dilation
-            brain_clean_mask = np.zeros_like(brain_seeds)
-            d = disk(2)
-            for s in range(brain_seeds.shape[2]):
-                sl = brain_seeds[:, :, s]
-                sl = sk_closing(sl, footprint=d)
-                sl = sk_dilation(sl, footprint=d)
-                brain_clean_mask[:, :, s] = sl
-                
-            labeled_3d = measure.label(brain_clean_mask)
-            regions_3d = measure.regionprops(labeled_3d)
-            if regions_3d:
-                largest_region = max(regions_3d, key=lambda r: r.area)
-                brain_clean_mask = (labeled_3d == largest_region.label)
-                
-            brain_mask = ants.from_numpy(brain_clean_mask.astype(np.float32), spacing=patient.spacing)
-            
-            # Run Atropos (exact same arguments as train_unet.py)
-            seg_result = ants.atropos(
-                a = patient,
-                m = '[0.2,1x1x1]',
-                c = '[5,0.00001]',
-                i = 'kmeans[3]',
-                x = brain_mask
-            )
-            seg_arr = seg_result['segmentation'].numpy().astype(np.int16)
-            
+            # ── Brain extraction (proper skull-stripping) ──────────────────────────
+            # Use ants.brain_extraction with the MNI152 template to get a tight
+            # brain mask — much more accurate than intensity thresholding.
+            try:
+                print("  Running ANTs brain extraction (skull-stripping)...")
+                # antspynet is preferred but fall back to template-based if not installed
+                try:
+                    import antspynet
+                    brain_mask_img = antspynet.brain_extraction(patient, modality="t1")
+                    # antspynet returns a probability map — threshold at 0.5
+                    brain_mask_np = (brain_mask_img.numpy() > 0.5).astype(np.float32)
+                    brain_mask = ants.from_numpy(brain_mask_np, spacing=patient.spacing)
+                    print("  Brain extraction done (antspynet deep-learning).")
+                except ImportError:
+                    # Fallback: register MNI brain mask to subject space
+                    print("  antspynet not installed, using template-based extraction...")
+                    reg_be = ants.registration(
+                        fixed=patient,
+                        moving=template,
+                        type_of_transform="Affine"
+                    )
+                    # Build a binary MNI mask (the MNI brain template already has bg=0)
+                    mni_mask_np = (template.numpy() > 0).astype(np.float32)
+                    mni_mask_img = ants.from_numpy(mni_mask_np, spacing=template.spacing)
+                    warped_mask = ants.apply_transforms(
+                        fixed=patient,
+                        moving=mni_mask_img,
+                        transformlist=reg_be['fwdtransforms'],
+                        interpolation='nearestNeighbor'
+                    )
+                    # Erode slightly to avoid skull leakage at edges
+                    from skimage.morphology import disk, erosion as sk_erosion, closing as sk_closing
+                    mask_np = warped_mask.numpy()
+                    mask_clean = np.zeros_like(mask_np)
+                    d_e = disk(2)
+                    d_c = disk(3)
+                    for s in range(mask_np.shape[2]):
+                        sl = mask_np[:, :, s] > 0.5
+                        sl = sk_closing(sl, footprint=d_c)
+                        sl = sk_erosion(sl, footprint=d_e)
+                        mask_clean[:, :, s] = sl
+                    # Keep only the largest connected component
+                    from skimage.measure import label as sk_label
+                    lbl = sk_label(mask_clean)
+                    if lbl.max() > 0:
+                        biggest = np.argmax(np.bincount(lbl.flat)[1:]) + 1
+                        mask_clean = (lbl == biggest).astype(np.float32)
+                    brain_mask = ants.from_numpy(mask_clean, spacing=patient.spacing)
+                    print("  Brain extraction done (template-based fallback).")
+            except Exception as be_err:
+                print(f"  [WARNING] Brain extraction failed ({be_err}), using intensity mask.")
+                # Last-resort: intensity threshold mask (original approach)
+                arr_3d = patient.numpy()
+                p1  = float(np.percentile(arr_3d, 1))
+                p99 = float(np.percentile(arr_3d, 99))
+                arr_norm = np.clip(arr_3d, p1, p99)
+                arr_norm = (arr_norm - p1) / (p99 - p1 + 1e-5)
+                from skimage.morphology import disk, closing as sk_closing, erosion as sk_erosion
+                brain_seeds = arr_norm > 0.25
+                brain_clean_mask = np.zeros_like(brain_seeds, dtype=np.float32)
+                d_close = disk(3)
+                d_erode = disk(2)
+                for s in range(brain_seeds.shape[2]):
+                    sl = brain_seeds[:, :, s]
+                    sl = sk_closing(sl, footprint=d_close)
+                    sl = sk_erosion(sl, footprint=d_erode)
+                    brain_clean_mask[:, :, s] = sl
+                labeled_3d = measure.label(brain_clean_mask)
+                regions_3d = measure.regionprops(labeled_3d)
+                if regions_3d:
+                    largest_region = max(regions_3d, key=lambda r: r.area)
+                    brain_clean_mask = (labeled_3d == largest_region.label).astype(np.float32)
+                brain_mask = ants.from_numpy(brain_clean_mask, spacing=patient.spacing)
+            # ──────────────────────────────────────────────────────────────────────
+
+            # ── Deep tissue segmentation (replaces Atropos kmeans) ──────────────
+            # antspynet.deep_atropos gives 6 tissue classes trained on thousands
+            # of labeled scans — far more accurate than intensity-based kmeans.
+            #   0 = background
+            #   1 = CSF
+            #   2 = cortical gray matter
+            #   3 = white matter
+            #   4 = deep gray matter  (subcortical GM)
+            #   5 = brain stem
+            #   6 = cerebellum
+            print("  Running deep_atropos tissue segmentation...")
+            try:
+                import antspynet
+                # Use do_preprocessing=True so antspynet runs its own N4 + brain
+                # extraction pipeline internally (avoids channel shape mismatch).
+                deep_result = antspynet.deep_atropos(
+                    patient,
+                    do_preprocessing=True,
+                    verbose=False
+                )
+                seg_arr = deep_result['segmentation_image'].numpy().astype(np.int16)
+                print("  deep_atropos done.")
+            except Exception as da_err:
+                print(f"  [WARNING] deep_atropos failed ({da_err}), falling back to Atropos kmeans")
+                seg_result = ants.atropos(
+                    a=patient, m='[0.2,1x1x1]', c='[5,0.00001]',
+                    i='kmeans[3]', x=brain_mask
+                )
+                seg_arr = seg_result['segmentation'].numpy().astype(np.int16)
+            # ──────────────────────────────────────────────────────────────────────
+
             # Save the segmentation mask as NIfTI
             import nibabel as nib
             dir_name = os.path.dirname(active_mri)
@@ -423,63 +494,111 @@ def run_feature_extraction(mri_path: str):
                 print(f"Saved upload segmentation mask to {seg_path}")
             except Exception as e:
                 print(f"[WARNING] Failed to save segmentation mask NIfTI: {e}")
-            
-            # Spacing
+
+            # Spacing — assumes voxel dimensions are in mm (standard for NIfTI/DICOM).
+            # Divide by 1000 to convert mm3 -> mL (1 mL = 1000 mm3).
             spacing = patient.spacing
-            voxel_vol_ml = (spacing[0] * spacing[1] * spacing[2]) / 1000.0
-            
-            csf_vol = float((seg_arr == 1).sum() * voxel_vol_ml)
-            gm_vol = float((seg_arr == 2).sum() * voxel_vol_ml)
-            wm_vol = float((seg_arr == 3).sum() * voxel_vol_ml)
-            tbv_vol = gm_vol + wm_vol
-            
-            # Affine registration for Hippocampus
-            reg = ants.registration(fixed=patient, moving=template, type_of_transform="Affine")
-            warped_labels = ants.apply_transforms(
-                fixed=patient,
-                moving=labels,
-                transformlist=reg['fwdtransforms'],
-                interpolation='nearestNeighbor'
-            )
-            warped_arr = warped_labels.numpy()
-            
-            def get_vol(label_idx):
-                return float((warped_arr == label_idx).sum() * voxel_vol_ml)
-                
+            spacing_mm = [s * 1000.0 if s < 0.01 else s for s in spacing]
+            voxel_vol_ml = (spacing_mm[0] * spacing_mm[1] * spacing_mm[2]) / 1000.0
+
+            # Tissue volumes from deep_atropos labels.
+            # TBV = cortical GM + deep GM + WM + brainstem (matches FastSurfer BrainSegVolNotVent).
+            # If deep_atropos was used (6 classes), labels are 0-6.
+            # If Atropos fallback was used (3 classes), labels are 1-3.
+            max_label = seg_arr.max()
+            if max_label >= 4:  # deep_atropos output
+                csf_vol = float((seg_arr == 1).sum() * voxel_vol_ml)
+                gm_vol  = float(((seg_arr == 2) | (seg_arr == 4)).sum() * voxel_vol_ml)
+                wm_vol  = float((seg_arr == 3).sum() * voxel_vol_ml)
+                bs_vol  = float((seg_arr == 5).sum() * voxel_vol_ml)
+                tbv_vol = gm_vol + wm_vol + bs_vol
+            else:               # Atropos kmeans[3] fallback
+                csf_vol = float((seg_arr == 1).sum() * voxel_vol_ml)
+                gm_vol  = float((seg_arr == 2).sum() * voxel_vol_ml)
+                wm_vol  = float((seg_arr == 3).sum() * voxel_vol_ml)
+                tbv_vol = gm_vol + wm_vol
+
             def calc_ai(left, right):
                 denom = 0.5 * (left + right)
                 if denom == 0:
                     return 0.0
                 return (abs(left - right) / denom) * 100.0
 
-            left_hippo = get_vol(9)
+            # ── antspynet harvard_oxford_atlas_labeling ────────────────────────
+            # DL-based full atlas parcellation — replaces SyNRA atlas warp.
+            # Returns a labelled image matching the Harvard-Oxford label scheme.
+            ho_arr = None
+            try:
+                import antspynet
+                print("  Running harvard_oxford_atlas_labeling (DL subcortical)...")
+                ho_result = antspynet.harvard_oxford_atlas_labeling(
+                    patient, do_preprocessing=True, verbose=False
+                )
+                ho_arr = ho_result['segmentation_image'].numpy()
+                print("  harvard_oxford_atlas_labeling done.")
+            except Exception as ho_err:
+                print(f"  [WARNING] harvard_oxford_atlas_labeling failed ({ho_err}), using SyNRA fallback")
+
+            if ho_arr is None:
+                # SyNRA fallback
+                print("  Registering atlas to subject space (SyNRA fallback)...")
+                reg = ants.registration(fixed=patient, moving=template, type_of_transform="SyNRA")
+                warped_labels = ants.apply_transforms(
+                    fixed=patient, moving=labels,
+                    transformlist=reg['fwdtransforms'], interpolation='nearestNeighbor'
+                )
+                ho_arr = warped_labels.numpy()
+
+            def get_vol(label_idx):
+                return float((ho_arr == label_idx).sum() * voxel_vol_ml)
+
+            # Harvard-Oxford labels (verified against atlas file):
+            # Left:  Lat.Ventricle=3, Thalamus=4, Caudate=5, Putamen=6,
+            #        Pallidum=7, Hippocampus=9, Amygdala=10
+            # Right: Lat.Ventricle=14, Thalamus=15, Caudate=16, Putamen=17,
+            #        Pallidum=18, Hippocampus=19, Amygdala=20
+            left_vent  = get_vol(3);   right_vent  = get_vol(14)
+            left_thal  = get_vol(4);   right_thal  = get_vol(15)
+            left_caud  = get_vol(5);   right_caud  = get_vol(16)
+            left_puta  = get_vol(6);   right_puta  = get_vol(17)
+            left_pall  = get_vol(7);   right_pall  = get_vol(18)
+            left_amyg  = get_vol(10);  right_amyg  = get_vol(20)
+
+            # ── antspynet deep_flash hippocampus segmentation ──────────────────
+            # Dedicated multi-label hippocampus DL model (more accurate than atlas).
+            left_hippo  = get_vol(9)
             right_hippo = get_vol(19)
+            try:
+                import antspynet
+                print("  Running deep_flash hippocampus segmentation...")
+                flash_result = antspynet.deep_flash(
+                    patient, do_preprocessing=True, verbose=False
+                )
+                flash_arr = flash_result['segmentation_image'].numpy()
+                # deep_flash labels: odd=left structures, even=right structures
+                # Sum all left labels (odd, >0) and right labels (even, >0)
+                left_labels  = [l for l in np.unique(flash_arr).astype(int) if l > 0 and l % 2 == 1]
+                right_labels = [l for l in np.unique(flash_arr).astype(int) if l > 0 and l % 2 == 0]
+                l_vol = float(np.isin(flash_arr, left_labels).sum()  * voxel_vol_ml)
+                r_vol = float(np.isin(flash_arr, right_labels).sum() * voxel_vol_ml)
+                if l_vol > 0.5 and r_vol > 0.5:
+                    left_hippo  = l_vol
+                    right_hippo = r_vol
+                    print(f"  deep_flash: L={left_hippo:.2f} R={right_hippo:.2f} mL")
+                else:
+                    raise ValueError("deep_flash returned near-zero volumes")
+            except Exception as df_err:
+                print(f"  [WARNING] deep_flash failed ({df_err}), using atlas hippocampus")
+
             hippo_ai = calc_ai(left_hippo, right_hippo)
+            vent_ai  = calc_ai(left_vent,  right_vent)
+            thal_ai  = calc_ai(left_thal,  right_thal)
+            caud_ai  = calc_ai(left_caud,  right_caud)
+            puta_ai  = calc_ai(left_puta,  right_puta)
+            pall_ai  = calc_ai(left_pall,  right_pall)
+            amyg_ai  = calc_ai(left_amyg,  right_amyg)
 
-            left_vent = get_vol(3)
-            right_vent = get_vol(14)
-            vent_ai = calc_ai(left_vent, right_vent)
 
-            left_thal = get_vol(4)
-            right_thal = get_vol(15)
-            thal_ai = calc_ai(left_thal, right_thal)
-
-            left_caud = get_vol(5)
-            right_caud = get_vol(16)
-            caud_ai = calc_ai(left_caud, right_caud)
-
-            left_puta = get_vol(6)
-            right_puta = get_vol(17)
-            puta_ai = calc_ai(left_puta, right_puta)
-
-            left_pall = get_vol(7)
-            right_pall = get_vol(18)
-            pall_ai = calc_ai(left_pall, right_pall)
-
-            left_amyg = get_vol(10)
-            right_amyg = get_vol(20)
-            amyg_ai = calc_ai(left_amyg, right_amyg)
-            
             volumetric_stats = {
                 "total_brain_volume_ml": tbv_vol,
                 "gray_matter_volume_ml": gm_vol,
@@ -623,7 +742,10 @@ def build_clinical_report(patient_id: str, features_dict: dict) -> str:
     vols_html = ""
     if has_vols:
         tbv = vol_stats.get("total_brain_volume_ml", 0)
-        
+        gm_vol_disp = vol_stats.get("gray_matter_volume_ml", 0)
+        wm_vol_disp = vol_stats.get("white_matter_volume_ml", 0)
+        csf_vol_disp = vol_stats.get("csf_volume_ml", 0)
+
         l_vent = vol_stats.get("left_ventricle_volume_ml", 0)
         r_vent = vol_stats.get("right_ventricle_volume_ml", 0)
         vent_asym = vol_stats.get("ventricle_asymmetry_index", 0)
@@ -660,6 +782,18 @@ def build_clinical_report(patient_id: str, features_dict: dict) -> str:
             <span class="metric-value">{tbv:,.2f} mL</span>
           </li>
           <li class="metric-item">
+            <span class="metric-label">Gray Matter Volume</span>
+            <span class="metric-value">{gm_vol_disp:,.2f} mL</span>
+          </li>
+          <li class="metric-item">
+            <span class="metric-label">White Matter Volume</span>
+            <span class="metric-value">{wm_vol_disp:,.2f} mL</span>
+          </li>
+          <li class="metric-item">
+            <span class="metric-label">CSF Volume</span>
+            <span class="metric-value">{csf_vol_disp:,.2f} mL</span>
+          </li>
+          <li class="metric-item">
             <span class="metric-label">Lateral Ventricles (Left / Right)</span>
             <span class="metric-value">{l_vent:.2f} mL / {r_vent:.2f} mL <span class="asymmetry-badge">Asym: {vent_asym:.1f}%</span></span>
           </li>
@@ -689,6 +823,7 @@ def build_clinical_report(patient_id: str, features_dict: dict) -> str:
           </li>
         </ul>
         """
+
     else:
         vols_html = """
         <div class="report-section-title">Subcortical Volumetrics (3D Atlas-Based)</div>
