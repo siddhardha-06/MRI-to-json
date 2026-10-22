@@ -1,0 +1,43 @@
+.venv/
+__pycache__/
+*.pyc
+
+# Dataset and masks
+ixi-t1/
+ixi-t1-masks/
+*.nii
+*.nii.gz
+*.zip
+*.tar.gz
+
+
+# Model checkpoints and outputs
+checkpoints/
+features/
+reports/
+uploads/
+uploads-masks/
+predicted_features.json
+rule_based_features.json
+rule_based_features_old.json
+
+# --- v2 (Phase 0): never commit data, weights, caches or secrets ---
+IXI_data/
+work/
+data/raw/
+data/*.xls
+data/*.xlsx
+*.pkl
+*.pth
+*.pt
+*.ckpt
+*.safetensors
+*.mgz
+*.npy
+*.npz
+**/fastsurfer_output/
+.env
+~$*
+
+# third-party tokenizer files (re-downloadable)
+data/tokenizers/

@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NeuroSphere — MRI Intelligence Platform</title>
+  <meta name="description" content="AI-powered brain MRI analysis. Automated feature extraction, tissue segmentation and volumetric analytics.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=6">
+  <script src="https://unpkg.com/@niivue/niivue@0.38.0/dist/niivue.umd.js" defer></script>
+</head>
+<body>
+
+<!-- ────────────────────────── SVG ICON SPRITE ──────────────────────────── -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="ic-upload"      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol>
+  <symbol id="ic-check"       viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="ic-close"       viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></symbol>
+  <symbol id="ic-zap"         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></symbol>
+  <symbol id="ic-chart"       viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></symbol>
+  <symbol id="ic-layers"      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></symbol>
+  <symbol id="ic-box"         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></symbol>
+  <symbol id="ic-scan"        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9V5a2 2 0 012-2h4M15 3h4a2 2 0 012 2v4M21 15v4a2 2 0 01-2 2h-4M9 21H5a2 2 0 01-2-2v-4"/><rect x="9" y="9" width="6" height="6"/></symbol>
+  <symbol id="ic-brain"       viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2A5.5 5.5 0 004 7.5c0 1.33.47 2.55 1.25 3.5C4.47 11.95 4 13.17 4 14.5A5.5 5.5 0 009.5 20h5A5.5 5.5 0 0020 14.5c0-1.33-.47-2.55-1.25-3.5C19.53 10.05 20 8.83 20 7.5A5.5 5.5 0 0014.5 2h-5z"/><path d="M12 2v18M7 7h2M15 7h2M7 12h2M15 12h2"/></symbol>
+  <symbol id="ic-cpu"         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></symbol>
+  <symbol id="ic-activity"    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></symbol>
+  <symbol id="ic-download"    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
+  <symbol id="ic-play"        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></symbol>
+  <symbol id="ic-print"       viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></symbol>
+  <symbol id="ic-sparkles"    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/><path d="M5 3l.75 2.25L8 6l-2.25.75L5 9l-.75-2.25L2 6l2.25-.75L5 3z"/></symbol>
+  <symbol id="ic-x"           viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+  <symbol id="ic-eye"         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="ic-arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></symbol>
+  <symbol id="ic-plus"        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+  <symbol id="ic-tag"         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></symbol>
+  <symbol id="ic-git-branch"  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 01-9 9"/></symbol>
+  <symbol id="ic-package"     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></symbol>
+  <symbol id="ic-file-text"   viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></symbol>
+  <symbol id="ic-info"        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></symbol>
+  <symbol id="ic-clock"       viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+</svg>
+
+<div class="app-root">
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       HEADER
+  ════════════════════════════════════════════════════════════════ -->
+  <header class="app-header" id="app-header">
+    <div class="header-logo">
+      <div class="logo-icon-wrap">
+        <svg style="width:18px;height:18px;color:#10b981"><use href="#ic-brain"/></svg>
+      </div>
+      <span class="logo-wordmark">NeuroSphere</span>
+    </div>
+
+    <div class="header-scan-info" id="header-scan-info" style="display:none">
+      <svg style="width:14px;height:14px;color:#10b981"><use href="#ic-scan"/></svg>
+      <span class="hsi-label">Active Scan</span>
+      <span class="hsi-name" id="active-scan-name">—</span>
+    </div>
+
+    <div class="header-right">
+      <div class="hstat" id="cuda-pill">
+        <span class="hstat-dot" id="cuda-status-dot"></span>
+        <span>CUDA: <b id="cuda-status-text">…</b></span>
+      </div>
+      <div class="hstat">
+        <span class="hstat-dot hstat-blue"></span>
+        <span>Scans: <b id="total-scans-text">0</b></span>
+      </div>
+      <div class="hstat">
+        <span class="hstat-dot hstat-green pulse-dot"></span>
+        <span>Online</span>
+      </div>
+      <button class="hbtn" id="btn-new-scan" style="display:none">
+        <svg style="width:14px;height:14px"><use href="#ic-plus"/></svg>
+        New Scan
+      </button>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       STATE 1 — UPLOAD (immersive dark hero)
+  ════════════════════════════════════════════════════════════════ -->
+  <section class="app-state" id="state-upload">
+    <canvas id="neural-canvas"></canvas>
+
+    <div class="upload-page">
+
+      <!-- Badge -->
+      <div class="up-badge">
+        <span class="up-badge-dot"></span>
+        AI-Powered Medical Imaging Platform
+      </div>
+
+      <!-- Hero headline -->
+      <h1 class="up-headline">
+        Transform MRI Scans<br>
+        <span class="up-headline-accent">Into Clinical Intelligence</span>
+      </h1>
+      <p class="up-sub">Upload a NIfTI brain scan and get instant automated analysis — bias correction, 40 quantitative biomarkers, tissue segmentation and 3D volumetrics.</p>
+
+      <!-- Main Upload Workspace -->
+      <div class="upload-workspace">
+        <!-- Drop zone -->
+        <div class="drop-zone-hero" id="drop-zone">
+          <div class="dz-border-ring"></div>
+          <div class="dz-inner" id="drop-zone-content">
+            <div class="dz-icon-wrap">
+              <svg class="dz-svg"><use href="#ic-upload"/></svg>
+              <div class="dz-icon-ring1"></div>
+              <div class="dz-icon-ring2"></div>
+            </div>
+            <h2 class="dz-title">Drop your NIfTI scan here</h2>
+            <p class="dz-sub">Accepts .nii &amp; .nii.gz — up to 2 GB</p>
+            <label class="dz-btn" for="file-input">
+              <svg style="width:16px;height:16px"><use href="#ic-upload"/></svg>
+              Browse Files
+            </label>
+            <input type="file" id="file-input" accept=".nii,.nii.gz" style="display:none">
+          </div>
+        </div>
+
+        <!-- Pipeline Settings -->
+        <div class="upload-settings">
+          <div class="settings-title">
+            <svg style="width:16px;height:16px;color:#10b981;margin-right:4px;"><use href="#ic-cpu"/></svg>
+            Pipeline Quality Settings
+          </div>
+          <div class="settings-grid">
+            <div class="setting-item">
+              <div class="setting-info">
+                <label for="toggle-run-mriqc" class="setting-label">Execute MRIQC Quality Check</label>
+                <div class="setting-desc">Assess quality metrics via MRIQC emulation / Docker</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="toggle-run-mriqc" checked>
+                <span class="slider round"></span>
+              </label>
+            </div>
+            <div class="setting-item">
+              <div class="setting-info">
+                <label for="toggle-force-continue" class="setting-label">Ignore Quality Gate Failures</label>
+                <div class="setting-desc">Continue pipeline even if scan fails clinical quality thresholds</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="toggle-force-continue">
+                <span class="slider round"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Feature grid -->
+      <div class="feature-grid">
+        <div class="feature-card" style="--fc-clr:rgba(16,185,129,0.6)">
+          <div class="fc-icon-wrap" style="background:rgba(16,185,129,0.12)">
+            <svg style="color:#10b981"><use href="#ic-zap"/></svg>
+          </div>
+          <h3>N4 Bias Correction</h3>
+          <p>Removes scanner field inhomogeneities using the N4ITK iterative algorithm</p>
+        </div>
+        <div class="feature-card" style="--fc-clr:rgba(52,211,153,0.6)">
+          <div class="fc-icon-wrap" style="background:rgba(52,211,153,0.12)">
+            <svg style="color:#34d399"><use href="#ic-chart"/></svg>
+          </div>
+          <h3>40 Biomarkers</h3>
+          <p>Intensity, GLCM texture, morphology, symmetry and frequency domain features</p>
+        </div>
+        <div class="feature-card" style="--fc-clr:rgba(99,102,241,0.6)">
+          <div class="fc-icon-wrap" style="background:rgba(99,102,241,0.12)">
+            <svg style="color:#818cf8"><use href="#ic-layers"/></svg>
+          </div>
+          <h3>Tissue Segmentation</h3>
+          <p>ANTsPy Atropos MRF segmentation into CSF, gray matter and white matter</p>
+        </div>
+        <div class="feature-card" style="--fc-clr:rgba(251,146,60,0.6)">
+          <div class="fc-icon-wrap" style="background:rgba(251,146,60,0.12)">
+            <svg style="color:#fb923c"><use href="#ic-box"/></svg>
+          </div>
+          <h3>3D Volumetrics</h3>
+          <p>Hippocampal and cortical volumes via Harvard-Oxford subcortical atlas</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       STATE 2 — PROCESSING (cinematic pipeline)
+  ════════════════════════════════════════════════════════════════ -->
+  <section class="app-state" id="state-processing" style="display:none">
+    <div class="processing-page">
+
+      <!-- Top info bar -->
+      <div class="proc-infobar">
+        <div class="pib-left">
+          <div class="pib-file">
+            <svg style="width:16px;height:16px;color:#10b981"><use href="#ic-scan"/></svg>
+            <span id="proc-file-name">Uploading…</span>
+          </div>
+        </div>
+        <div class="pib-right">
+          <svg style="width:14px;height:14px;color:#10b981"><use href="#ic-clock"/></svg>
+          <span id="proc-time-label">Est. remaining:</span>
+          <strong id="proc-time-value">Calculating…</strong>
+        </div>
+      </div>
+
+      <!-- Overall + time progress -->
+      <div class="proc-progress-card">
+        <div class="ppc-top">
+          <span class="ppc-label">Overall Progress</span>
+          <span class="ppc-pct" id="proc-overall-pct">0%</span>
+        </div>
+        <div class="ppc-track">
+          <div class="ppc-fill" id="proc-overall-fill" style="width:0%">
+            <div class="shimmer"></div>
+          </div>
+        </div>
+        <!-- Time bar -->
+        <div class="ppc-time-row">
+          <div class="ppc-time-track">
+            <div class="ppc-time-fill" id="proc-time-fill" style="width:0%"></div>
+          </div>
+          <div class="ppc-time-labels">
+            <span id="proc-elapsed-text">0s elapsed</span>
+            <span id="proc-total-text">~14s total</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Horizontal stepper -->
+      <div class="h-stepper" id="h-stepper"></div>
+
+      <!-- Hero step card -->
+      <div class="hero-step-card" id="hero-card">
+        <div class="hsc-icon-col">
+          <div class="hsc-icon-wrap" id="hero-icon">
+            <svg class="hsc-icon"><use href="#ic-upload"/></svg>
+          </div>
+          <div class="hsc-step-progress">
+            <svg viewBox="0 0 100 100" class="step-ring-svg">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(16,185,129,0.1)" stroke-width="8"/>
+              <circle cx="50" cy="50" r="42" fill="none" stroke="#10b981" stroke-width="8"
+                stroke-dasharray="264" stroke-dashoffset="264"
+                stroke-linecap="round" id="step-ring-circle"
+                style="transform:rotate(-90deg);transform-origin:center;transition:stroke-dashoffset 0.4s ease"/>
+            </svg>
+            <span class="step-ring-pct" id="hero-progress-pct">0%</span>
+          </div>
+        </div>
+        <div class="hsc-content">
+          <div class="hsc-step-badge" id="hero-step-num">Step 1 / 6</div>
+          <h2 class="hsc-title" id="hero-step-name">File Upload</h2>
+          <p class="hsc-desc" id="hero-step-desc">Securely transferring your MRI scan to the analysis server</p>
+          <!-- Step log -->
+          <div class="hsc-log" id="hero-log">
+            <div class="hlog-line">Initialising…</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       STATE 3 — DASHBOARD
+  ════════════════════════════════════════════════════════════════ -->
+  <section class="app-state" id="state-dashboard" style="display:none">
+
+    <!-- Pipeline ribbon (full width) -->
+    <div class="pipeline-ribbon" id="pipeline-ribbon">
+
+      <!-- Auto analysis steps (populated by JS after upload) -->
+      <div class="ribbon-group">
+        <div class="ribbon-group-label">Analysis Pipeline</div>
+        <div class="ribbon-steps" id="ribbon-auto-steps">
+          <!-- built by JS -->
+        </div>
+      </div>
+
+      <div class="ribbon-sep"></div>
+
+      <!-- Manual training steps -->
+      <div class="ribbon-group ribbon-group-grow">
+        <div class="ribbon-group-label">Training Pipeline</div>
+        <div class="ribbon-steps" id="ribbon-training-steps">
+          <div class="rsi clickable" id="ribbon-step-1" data-step="1">
+            <div class="rsi-node rsi-pending" id="rnode-1"><svg style="width:11px;height:11px"><use href="#ic-tag"/></svg></div>
+            <div class="rsi-info"><div class="rsi-name">Label Gen</div><span class="rsi-badge badge-pending" id="rbadge-1">Pending</span></div>
+          </div>
+          <div class="rsi-conn"><svg style="width:10px;height:10px"><use href="#ic-arrow-right"/></svg></div>
+          <div class="rsi clickable" id="ribbon-step-2" data-step="2">
+            <div class="rsi-node rsi-pending" id="rnode-2"><svg style="width:11px;height:11px"><use href="#ic-activity"/></svg></div>
+            <div class="rsi-info"><div class="rsi-name">Autoencoder</div><span class="rsi-badge badge-pending" id="rbadge-2">Pending</span></div>
+          </div>
+          <div class="rsi-conn"><svg style="width:10px;height:10px"><use href="#ic-arrow-right"/></svg></div>
+          <div class="rsi clickable" id="ribbon-step-3" data-step="3">
+            <div class="rsi-node rsi-pending" id="rnode-3"><svg style="width:11px;height:11px"><use href="#ic-cpu"/></svg></div>
+            <div class="rsi-info"><div class="rsi-name">U-Net</div><span class="rsi-badge badge-pending" id="rbadge-3">Pending</span></div>
+          </div>
+          <div class="rsi-conn"><svg style="width:10px;height:10px"><use href="#ic-arrow-right"/></svg></div>
+          <div class="rsi clickable" id="ribbon-step-4" data-step="4">
+            <div class="rsi-node rsi-pending" id="rnode-4"><svg style="width:11px;height:11px"><use href="#ic-git-branch"/></svg></div>
+            <div class="rsi-info"><div class="rsi-name">Regressor</div><span class="rsi-badge badge-pending" id="rbadge-4">Pending</span></div>
+          </div>
+          <div class="rsi-conn"><svg style="width:10px;height:10px"><use href="#ic-arrow-right"/></svg></div>
+          <div class="rsi clickable" id="ribbon-step-5" data-step="5">
+            <div class="rsi-node rsi-pending" id="rnode-5"><svg style="width:11px;height:11px"><use href="#ic-package"/></svg></div>
+            <div class="rsi-info"><div class="rsi-name">Extract</div><span class="rsi-badge badge-pending" id="rbadge-5">Pending</span></div>
+          </div>
+          <div class="rsi-conn"><svg style="width:10px;height:10px"><use href="#ic-arrow-right"/></svg></div>
+          <div class="rsi clickable" id="ribbon-step-6" data-step="6">
+            <div class="rsi-node rsi-pending" id="rnode-6"><svg style="width:11px;height:11px"><use href="#ic-file-text"/></svg></div>
+            <div class="rsi-info"><div class="rsi-name">Reports</div><span class="rsi-badge badge-pending" id="rbadge-6">Pending</span></div>
+          </div>
+        </div>
+        <div class="ribbon-controls">
+          <label class="rc-label" for="pipeline-data-source">Source:</label>
+          <select id="pipeline-data-source" class="rc-select">
+            <option value="uploads">Uploaded Scans</option>
+            <option value="ixi-t1" selected>Default Dataset (ixi-t1)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step run panel -->
+    <div class="step-run-panel" id="step-run-panel" style="display:none">
+      <div class="srp-header">
+        <div>
+          <h3 class="srp-title" id="srp-title">Step 1 – Pseudo-Label Generation</h3>
+          <p class="srp-desc"  id="srp-desc">Runs ANTsPy Atropos segmentation.</p>
+        </div>
+        <div class="srp-actions">
+          <button class="btn btn-green btn-sm" id="srp-run-btn">
+            <svg style="width:14px;height:14px"><use href="#ic-play"/></svg> Run Step
+          </button>
+          <button class="btn btn-ghost btn-sm" id="srp-close-btn">
+            <svg style="width:14px;height:14px"><use href="#ic-x"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="srp-log" id="srp-log">
+        <span style="color:rgba(110,231,183,0.4)">Click "Run Step" to execute this pipeline stage.</span>
+      </div>
+    </div>
+
+    <!-- Dashboard main content -->
+    <div class="dash-content">
+
+      <!-- Scan toolbar -->
+      <div class="scan-toolbar">
+        <div class="st-left">
+          <svg style="width:16px;height:16px;color:#10b981"><use href="#ic-scan"/></svg>
+          <span class="st-label">Active Scan:</span>
+          <span class="st-name" id="tbar-scan-name">No scan selected</span>
+          <div class="st-chips" id="scan-metadata-summary">
+            <span class="chip">Awaiting Upload</span>
+          </div>
+        </div>
+        <div class="st-right">
+          <button class="btn btn-outline btn-sm" id="btn-download-json" style="display:none">
+            <svg style="width:14px;height:14px"><use href="#ic-download"/></svg> Download JSON
+          </button>
+        </div>
+      </div>
+
+      <!-- Empty state (no scan) -->
+      <div class="empty-viewport" id="empty-viewport-message">
+        <div class="ev-icon">
+          <svg style="width:36px;height:36px;color:#10b981;opacity:.5"><use href="#ic-brain"/></svg>
+        </div>
+        <h3>No Scan Loaded</h3>
+        <p>Upload a NIfTI scan to begin analysis</p>
+        <button class="btn btn-green" id="btn-go-upload">
+          <svg style="width:15px;height:15px"><use href="#ic-upload"/></svg> Upload Scan
+        </button>
+      </div>
+
+      <!-- Analytics viewport (hidden until scan selected) -->
+      <div id="analysis-viewport" style="display:none">
+
+        <!-- Row: Viewer + Meta -->
+        <div class="analytics-top-row">
+
+          <!-- 3D Viewer card -->
+          <div class="acard viewer-card">
+            <div class="viewer-glow"></div>
+            <div class="viewer-inner">
+              <div class="vi-brain-icon">
+                <svg style="width:56px;height:56px;color:#10b981"><use href="#ic-brain"/></svg>
+              </div>
+              <h3>Interactive 3D Viewer</h3>
+              <p>WebGL NiiVue rendering — axial, coronal &amp; sagittal planes</p>
+              <button class="btn btn-green" id="btn-launch-viewer">
+                <svg style="width:15px;height:15px"><use href="#ic-eye"/></svg>
+                Launch Visualizer
+              </button>
+            </div>
+          </div>
+
+          <!-- Metadata card -->
+          <div class="acard meta-card">
+            <div class="acard-header">
+              <svg style="width:15px;height:15px;color:#10b981"><use href="#ic-info"/></svg>
+              <span>Scan Metadata</span>
+            </div>
+            <div class="meta-grid" id="metadata-grid"></div>
+            <div class="tissue-section">
+              <div class="ts-heading">Tissue Distribution</div>
+              <div class="tissue-bars">
+                <div class="tbar-row">
+                  <div class="tbar-meta">
+                    <span class="tbar-name">CSF &amp; Ventricles</span>
+                    <span class="tbar-val" id="label-csf-pct">0%</span>
+                  </div>
+                  <div class="tbar-track"><div class="tbar-fill csf-fill" id="bar-csf-pct" style="width:0%"></div></div>
+                </div>
+                <div class="tbar-row">
+                  <div class="tbar-meta">
+                    <span class="tbar-name">Gray Matter</span>
+                    <span class="tbar-val" id="label-gm-pct">0%</span>
+                  </div>
+                  <div class="tbar-track"><div class="tbar-fill gm-fill" id="bar-gm-pct" style="width:0%"></div></div>
+                </div>
+                <div class="tbar-row">
+                  <div class="tbar-meta">
+                    <span class="tbar-name">White Matter</span>
+                    <span class="tbar-val" id="label-wm-pct">0%</span>
+                  </div>
+                  <div class="tbar-track"><div class="tbar-fill wm-fill" id="bar-wm-pct" style="width:0%"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Metric tabs -->
+        <div class="acard tabs-card">
+          <div class="tabs-nav">
+            <button class="tab-btn active" data-tab="tab-metrics">Quantitative Metrics</button>
+            <button class="tab-btn" data-tab="tab-comparison">Feature Comparison (61D)</button>
+            <button class="tab-btn" data-tab="tab-report">Clinical Report</button>
+            <button class="tab-btn" data-tab="tab-mriqc">Image Quality (MRIQC)</button>
+          </div>
+          <div class="tabs-body">
+
+            <!-- Tab: Metrics -->
+            <div class="tab-pane active" id="tab-metrics">
+              <div class="metrics-grid">
+                <div class="mg-group"><div class="mg-title">Intensity Statistics</div><table class="mtable" id="table-intensity"></table></div>
+                <div class="mg-group"><div class="mg-title">Morphology &amp; Symmetry</div><table class="mtable" id="table-morphology"></table></div>
+                <div class="mg-group"><div class="mg-title">GLCM Texture</div><table class="mtable" id="table-texture"></table></div>
+                <div class="mg-group"><div class="mg-title">3D Volumes (ANTsPy)</div><table class="mtable" id="table-volumes"></table></div>
+              </div>
+            </div>
+
+            <!-- Tab: Comparison -->
+            <div class="tab-pane" id="tab-comparison">
+              <div class="comp-banner">
+                <p>61-dimensional vector: <strong>Rule-Based Ground Truth</strong> vs <strong>Regressor Prediction</strong></p>
+                <div class="comp-status" id="comparison-status-text">Train the Regressor (Step 4) to compare predictions.</div>
+              </div>
+              <div class="vector-scroll">
+                <table class="vtable">
+                  <thead><tr><th>#</th><th>Feature</th><th>Rule-Based</th><th>Predicted</th><th>Diff</th><th>Deviation</th></tr></thead>
+                  <tbody id="comparison-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Tab: Report -->
+            <div class="tab-pane" id="tab-report">
+              <div class="report-cta" id="report-generate-cta">
+                <svg style="width:40px;height:40px;color:#10b981;opacity:.7"><use href="#ic-file-text"/></svg>
+                <h3>AI Clinical Report</h3>
+                <p>Generate a structured Gemini AI summary of the extracted MRI biomarkers</p>
+                <button class="btn btn-green" id="btn-generate-report">
+                  <svg style="width:15px;height:15px"><use href="#ic-sparkles"/></svg> Generate Report
+                </button>
+                <div class="report-spinner" id="report-generating-state" style="display:none">
+                  <div class="spin-ring"></div><span>Generating…</span>
+                </div>
+              </div>
+              <div class="report-toolbar" id="report-toolbar" style="display:none">
+                <button class="btn btn-outline btn-sm" id="btn-print-report"><svg style="width:13px;height:13px"><use href="#ic-print"/></svg> Print</button>
+                <button class="btn btn-outline btn-sm" id="btn-download-report"><svg style="width:13px;height:13px"><use href="#ic-download"/></svg> Download</button>
+              </div>
+              <div class="clinical-doc" id="clinical-document-paper" style="display:none">
+                <div id="report-text-content"></div>
+              </div>
+            </div>
+
+            <!-- Tab: MRIQC -->
+            <div class="tab-pane" id="tab-mriqc">
+
+              <!-- Quality rating banner -->
+              <div class="mriqc-rating-banner">
+                <div class="rating-badge grade-excellent" id="mriqc-rating-badge">—</div>
+                                        <div class="rating-info" style="flex: 1;">
+                                            <h4>Overall Scan Quality: <span id="mriqc-quality-label">Excellent</span></h4>
+                                            <p id="mriqc-quality-desc">This scan meets or exceeds all clinical quality thresholds. Signal-to-noise ratio is high, and motion artifacts are minimal.</p>
+                                        </div>
+                                        <!-- Confidence Score Gauge -->
+                                        <div class="confidence-gauge-wrap">
+                                            <div class="confidence-label">Confidence Score</div>
+                                            <div class="confidence-gauge">
+                                                <svg viewBox="0 0 80 80" width="80" height="80">
+                                                    <circle class="gauge-bg" cx="40" cy="40" r="33" fill="none" stroke-width="7"/>
+                                                    <circle class="gauge-fill" id="confidence-gauge-ring" cx="40" cy="40" r="33" fill="none" stroke-width="7"
+                                                        stroke-dasharray="207.3" stroke-dashoffset="207.3"
+                                                        transform="rotate(-90 40 40)"/>
+                                                </svg>
+                                                <div class="gauge-text">
+                                                    <span id="confidence-score-value">—</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+              <!-- Docker run control row -->
+              <div class="mriqc-docker-row">
+                <button class="btn btn-blue btn-sm" id="btn-run-mriqc-docker">
+                  🐳 Run Official MRIQC (Docker)
+                </button>
+                <span class="mriqc-status-label" id="mriqc-docker-status">Status: Idle (Docker MRIQC not run)</span>
+              </div>
+
+              <!-- Docker console output (hidden by default) -->
+              <div class="mriqc-docker-console" id="mriqc-docker-console" style="display:none">
+                <div class="mdc-header">
+                  <span>MRIQC Docker Output</span>
+                  <div class="mdc-spinner" id="mriqc-docker-spinner" style="display:none"></div>
+                </div>
+                <div class="mdc-output" id="mriqc-docker-output"></div>
+              </div>
+
+              <!-- IQM metrics table -->
+              <div class="mriqc-table-wrap">
+                <div class="mg-title">Image Quality Metrics (IQMs)</div>
+                <table class="mtable" style="width:100%">
+                  <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+                  <tbody id="table-mriqc-details">
+                    <tr><td colspan="2" style="color:var(--t4);text-align:center;font-style:italic;padding:20px 0;font-size:11px;">Select a scan to view computed image quality metrics.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Clinical QA reference thresholds -->
+              <div class="mriqc-thresholds">
+                <div class="mg-title">Clinical QA Threshold Reference</div>
+                <div class="threshold-grid">
+                  <div class="threshold-item">
+                    <span class="threshold-dot status-green" id="dot-cjv"></span>
+                    <div class="threshold-info">
+                      <strong>CJV</strong> — Coefficient of Joint Variation<br>
+                      <small>Optimal: &lt; 0.75 | Acceptable: &lt; 0.85</small>
+                    </div>
+                  </div>
+                  <div class="threshold-item">
+                    <span class="threshold-dot status-green" id="dot-cnr"></span>
+                    <div class="threshold-info">
+                      <strong>CNR</strong> — Contrast-to-Noise Ratio<br>
+                      <small>Optimal: &gt; 1.20 | Acceptable: &gt; 0.80</small>
+                    </div>
+                  </div>
+                  <div class="threshold-item">
+                    <span class="threshold-dot status-green" id="dot-efc"></span>
+                    <div class="threshold-info">
+                      <strong>EFC</strong> — Entropy Focus Criterion<br>
+                      <small>Optimal: &lt; 0.95 | Acceptable: &lt; 0.97</small>
+                    </div>
+                  </div>
+                  <div class="threshold-item">
+                    <span class="threshold-dot status-green" id="dot-qi1"></span>
+                    <div class="threshold-info">
+                      <strong>QI_1</strong> — Ghosting Artifact Index<br>
+                      <small>Optimal: &lt; 0.05 | Acceptable: &lt; 0.08</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Console output panel -->
+        <div class="console-card acard">
+          <div class="console-header">
+            <div class="ch-left">
+              <span class="ch-dot" id="console-pulse"></span>
+              <span class="ch-title">System Console</span>
+            </div>
+            <button class="btn btn-ghost btn-sm" id="btn-clear-console">Clear</button>
+          </div>
+          <div class="console-output" id="console-output">
+            <div class="console-line system-msg">[System] NeuroSphere initialized. Upload a scan or select a patient to begin.</div>
+          </div>
+        </div>
+
+      </div><!-- /analysis-viewport -->
+    </div><!-- /dash-content -->
+  </section>
+
+</div><!-- .app-root -->
+
+<!-- ═══════════════════════════════════════════════════════════════
+     STAGE OUTPUT DRAWER
+════════════════════════════════════════════════════════════════ -->
+<div class="output-drawer" id="output-drawer" style="display:none">
+  <div class="od-backdrop" id="drawer-backdrop"></div>
+  <div class="od-panel">
+    <div class="od-header">
+      <div class="od-header-left">
+        <div class="od-icon-wrap" id="drawer-icon">
+          <svg style="width:18px;height:18px"><use href="#ic-check"/></svg>
+        </div>
+        <h3 class="od-title" id="drawer-title">Stage Output</h3>
+      </div>
+      <button class="btn btn-ghost btn-icon" id="drawer-close">
+        <svg style="width:15px;height:15px"><use href="#ic-x"/></svg>
+      </button>
+    </div>
+    <div class="od-body" id="drawer-body"></div>
+  </div>
+</div>
+
+<script src="app.js?v=8"></script>
+</body>
+</html>

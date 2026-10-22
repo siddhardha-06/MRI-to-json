@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NeuroSphere</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">NeuroSphere <span id="version" class="muted"></span></div>
+    <div id="status" class="muted"></div>
+  </header>
+  <div class="notice" id="stage-note"></div>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <form id="upload-form" class="upload">
+        <label for="file-input">Upload a T1 NIfTI (.nii / .nii.gz)</label>
+        <input id="file-input" type="file" accept=".nii,.gz">
+        <button type="submit">Upload</button>
+        <div id="upload-msg" class="muted"></div>
+      </form>
+      <input id="filter" type="search" placeholder="Filter subjects" aria-label="Filter subjects">
+      <ul id="subjects" class="subjects"></ul>
+    </aside>
+
+    <section class="content">
+      <div id="empty" class="muted">Select a subject.</div>
+      <div id="subject-view" hidden>
+        <h1 id="subject-title"></h1>
+        <nav class="tabs" role="tablist">
+          <button class="tab active" data-tab="summary">Summary</button>
+          <button class="tab" data-tab="json">JSON</button>
+          <button class="tab" data-tab="report">Report</button>
+          <button class="tab" data-tab="quality">Quality</button>
+          <a id="viewer-link" class="tab" target="_blank" rel="noopener">3D viewer</a>
+        </nav>
+        <div class="panel" id="panel-summary"></div>
+        <div class="panel" id="panel-json" hidden><pre id="json-pre"></pre></div>
+        <div class="panel" id="panel-report" hidden></div>
+        <div class="panel" id="panel-quality" hidden>
+          <div id="quality-body"></div>
+          <button id="mriqc-run" type="button">Run official MRIQC (Docker)</button>
+          <pre id="mriqc-log" class="log"></pre>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

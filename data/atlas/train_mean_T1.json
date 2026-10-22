@@ -1,0 +1,41 @@
+{
+  "n_train_images": 403,
+  "brain_centroid_voxel_train_mean": [
+    82.29,
+    93.27,
+    108.7
+  ],
+  "brain_centroid_voxel_train_sd": [
+    0.45,
+    2.0,
+    1.8
+  ],
+  "brain_centroid_voxel_cyclemorph_atlas": [
+    78.51,
+    88.11,
+    104.56
+  ],
+  "provenance": {
+    "pipeline_version": "2.0.0.dev1",
+    "git_commit": {
+      "sha": "3c94e39b8416b790c46ee3f72863bec3b0fa6ed9",
+      "dirty": true
+    },
+    "timestamp_utc": "2026-10-08T18:41:02+00:00",
+    "command": "scripts/make_train_template.py",
+    "software": {
+      "python": "3.12.6",
+      "platform": "Windows-11-10.0.26300-SP0",
+      "numpy": "2.3.5",
+      "scipy": "1.15.3",
+      "nibabel": "5.4.2",
+      "torch": "2.6.0+cu124",
+      "antspyx": "0.6.3",
+      "scikit-learn": "1.9.0",
+      "scikit-image": "0.26.0",
+      "pandas": "3.0.3",
+      "pingouin": "0.7.0"
+    },
+    "data_subset": "IXI_data/Train (403)"
+  }
+}

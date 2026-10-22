@@ -1,0 +1,1269 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.local/schema/neurosphere-2.0.schema.json",
+  "title": "NeuroSphere T1w MRI representation 2.0.0",
+  "description": "Null values must carry a sibling '<key>_reason' string (checked at runtime by neurosphere.nulls).",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "subject",
+    "acquisition",
+    "quality",
+    "segmentation",
+    "volumes_ml",
+    "etiv_ml",
+    "normalized_volumes_pct_etiv",
+    "asymmetry_index_pct",
+    "tissue",
+    "intensity",
+    "normative",
+    "limitations",
+    "provenance"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "2.0.0"
+    },
+    "subject": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "source_file": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "id",
+        "source_file",
+        "sha256"
+      ]
+    },
+    "acquisition": {
+      "type": "object",
+      "properties": {
+        "shape": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "voxel_size_mm": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "orientation_original": {
+          "type": "string",
+          "pattern": "^[LRAPSI]{3}$"
+        },
+        "site": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "shape",
+        "voxel_size_mm",
+        "orientation_original"
+      ]
+    },
+    "covariates": {
+      "type": "object",
+      "properties": {
+        "age": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "sex": {
+          "enum": [
+            "M",
+            "F",
+            null
+          ]
+        }
+      }
+    },
+    "quality": {
+      "type": "object",
+      "properties": {
+        "iqms": {
+          "type": "object"
+        },
+        "gate": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "enum": [
+                "pass",
+                "warn",
+                "fail",
+                "not_computed"
+              ]
+            },
+            "reasons": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "robust_z": {
+              "type": "object"
+            },
+            "thresholds": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "status",
+            "reasons"
+          ]
+        },
+        "mriqc_official": {
+          "type": [
+            "object",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "iqms",
+        "gate"
+      ]
+    },
+    "segmentation": {
+      "type": "object",
+      "properties": {
+        "model": {
+          "type": "string"
+        },
+        "checkpoint": {
+          "type": "object"
+        },
+        "label_set": {
+          "type": "string"
+        },
+        "space": {
+          "type": "string"
+        },
+        "volume_method": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "model",
+        "checkpoint",
+        "label_set",
+        "space"
+      ]
+    },
+    "volumes_ml": {
+      "type": "object",
+      "properties": {
+        "left_cerebral_white_matter": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "left_cerebral_cortex": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "left_lateral_ventricle": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "left_cerebellum_white_matter": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "left_cerebellum_cortex": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "left_thalamus": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "left_caudate": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "left_putamen": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "left_pallidum": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "third_ventricle": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "fourth_ventricle": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "brain_stem": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "left_hippocampus": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "left_amygdala": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "left_accumbens": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "left_ventral_dc": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "right_cerebral_white_matter": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "right_cerebral_cortex": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "right_lateral_ventricle": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "right_cerebellum_white_matter": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "right_cerebellum_cortex": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "right_thalamus": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "right_caudate": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "right_putamen": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "right_pallidum": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "right_hippocampus": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "right_amygdala": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "right_accumbens": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "right_ventral_dc": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "total_cerebral_white_matter": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "total_cerebral_cortex": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "total_lateral_ventricle": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "total_cerebellum_white_matter": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "total_cerebellum_cortex": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "total_thalamus": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "total_caudate": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "total_putamen": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "total_pallidum": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "total_hippocampus": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "total_amygdala": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "total_accumbens": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "total_ventral_dc": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "native_grid_check": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value"
+          ]
+        }
+      },
+      "required": [
+        "left_cerebral_white_matter",
+        "left_cerebral_cortex",
+        "left_lateral_ventricle",
+        "left_cerebellum_white_matter",
+        "left_cerebellum_cortex",
+        "left_thalamus",
+        "left_caudate",
+        "left_putamen",
+        "left_pallidum",
+        "third_ventricle",
+        "fourth_ventricle",
+        "brain_stem",
+        "left_hippocampus",
+        "left_amygdala",
+        "left_accumbens",
+        "left_ventral_dc",
+        "right_cerebral_white_matter",
+        "right_cerebral_cortex",
+        "right_lateral_ventricle",
+        "right_cerebellum_white_matter",
+        "right_cerebellum_cortex",
+        "right_thalamus",
+        "right_caudate",
+        "right_putamen",
+        "right_pallidum",
+        "right_hippocampus",
+        "right_amygdala",
+        "right_accumbens",
+        "right_ventral_dc",
+        "total_cerebral_white_matter",
+        "total_cerebral_cortex",
+        "total_lateral_ventricle",
+        "total_cerebellum_white_matter",
+        "total_cerebellum_cortex",
+        "total_thalamus",
+        "total_caudate",
+        "total_putamen",
+        "total_pallidum",
+        "total_hippocampus",
+        "total_amygdala",
+        "total_accumbens",
+        "total_ventral_dc"
+      ],
+      "additionalProperties": false
+    },
+    "etiv_ml": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "number",
+          "minimum": 0
+        },
+        "method": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "value",
+        "method"
+      ]
+    },
+    "brain_mask_ml": {
+      "type": "number"
+    },
+    "normalized_volumes_pct_etiv": {
+      "type": "object",
+      "properties": {
+        "left_cerebral_white_matter": {
+          "type": "number"
+        },
+        "left_cerebral_cortex": {
+          "type": "number"
+        },
+        "left_lateral_ventricle": {
+          "type": "number"
+        },
+        "left_cerebellum_white_matter": {
+          "type": "number"
+        },
+        "left_cerebellum_cortex": {
+          "type": "number"
+        },
+        "left_thalamus": {
+          "type": "number"
+        },
+        "left_caudate": {
+          "type": "number"
+        },
+        "left_putamen": {
+          "type": "number"
+        },
+        "left_pallidum": {
+          "type": "number"
+        },
+        "third_ventricle": {
+          "type": "number"
+        },
+        "fourth_ventricle": {
+          "type": "number"
+        },
+        "brain_stem": {
+          "type": "number"
+        },
+        "left_hippocampus": {
+          "type": "number"
+        },
+        "left_amygdala": {
+          "type": "number"
+        },
+        "left_accumbens": {
+          "type": "number"
+        },
+        "left_ventral_dc": {
+          "type": "number"
+        },
+        "right_cerebral_white_matter": {
+          "type": "number"
+        },
+        "right_cerebral_cortex": {
+          "type": "number"
+        },
+        "right_lateral_ventricle": {
+          "type": "number"
+        },
+        "right_cerebellum_white_matter": {
+          "type": "number"
+        },
+        "right_cerebellum_cortex": {
+          "type": "number"
+        },
+        "right_thalamus": {
+          "type": "number"
+        },
+        "right_caudate": {
+          "type": "number"
+        },
+        "right_putamen": {
+          "type": "number"
+        },
+        "right_pallidum": {
+          "type": "number"
+        },
+        "right_hippocampus": {
+          "type": "number"
+        },
+        "right_amygdala": {
+          "type": "number"
+        },
+        "right_accumbens": {
+          "type": "number"
+        },
+        "right_ventral_dc": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "left_cerebral_white_matter",
+        "left_cerebral_cortex",
+        "left_lateral_ventricle",
+        "left_cerebellum_white_matter",
+        "left_cerebellum_cortex",
+        "left_thalamus",
+        "left_caudate",
+        "left_putamen",
+        "left_pallidum",
+        "third_ventricle",
+        "fourth_ventricle",
+        "brain_stem",
+        "left_hippocampus",
+        "left_amygdala",
+        "left_accumbens",
+        "left_ventral_dc",
+        "right_cerebral_white_matter",
+        "right_cerebral_cortex",
+        "right_lateral_ventricle",
+        "right_cerebellum_white_matter",
+        "right_cerebellum_cortex",
+        "right_thalamus",
+        "right_caudate",
+        "right_putamen",
+        "right_pallidum",
+        "right_hippocampus",
+        "right_amygdala",
+        "right_accumbens",
+        "right_ventral_dc"
+      ]
+    },
+    "asymmetry_index_pct": {
+      "type": "object",
+      "properties": {
+        "cerebral_white_matter": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "cerebral_cortex": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "lateral_ventricle": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "cerebellum_white_matter": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "cerebellum_cortex": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "thalamus": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "caudate": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "putamen": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "pallidum": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "hippocampus": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "amygdala": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "accumbens": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "ventral_dc": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "cerebral_white_matter_reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cerebral_cortex_reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "lateral_ventricle_reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cerebellum_white_matter_reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cerebellum_cortex_reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "thalamus_reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "caudate_reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "putamen_reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pallidum_reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "hippocampus_reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "amygdala_reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "accumbens_reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ventral_dc_reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "cerebral_white_matter",
+        "cerebral_cortex",
+        "lateral_ventricle",
+        "cerebellum_white_matter",
+        "cerebellum_cortex",
+        "thalamus",
+        "caudate",
+        "putamen",
+        "pallidum",
+        "hippocampus",
+        "amygdala",
+        "accumbens",
+        "ventral_dc"
+      ]
+    },
+    "tissue": {
+      "type": "object",
+      "properties": {
+        "gray_matter_ml": {
+          "type": "number"
+        },
+        "white_matter_ml": {
+          "type": "number"
+        },
+        "ventricular_csf_ml": {
+          "type": "number"
+        },
+        "brain_parenchyma_ml": {
+          "type": "number"
+        },
+        "brain_parenchymal_fraction": {
+          "type": "number"
+        },
+        "gm_wm_volume_ratio": {
+          "type": "number"
+        },
+        "ventricle_brain_ratio": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "gray_matter_ml",
+        "white_matter_ml",
+        "ventricular_csf_ml",
+        "brain_parenchyma_ml"
+      ]
+    },
+    "intensity": {
+      "type": "object"
+    },
+    "normative": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "reference": {
+          "type": "string"
+        },
+        "z": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "percentile": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "flags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "provenance": {
+      "type": "object"
+    }
+  }
+}

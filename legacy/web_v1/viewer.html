@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D NiiVue Brain Visualizer</title>
+    <!-- Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <!-- NiiVue CDN UMD build -->
+    <script src="https://unpkg.com/@niivue/niivue@0.38.0/dist/niivue.umd.js"></script>
+    <style>
+        :root {
+            --bg-dark: #0d1117;
+            --panel-bg: rgba(13, 17, 23, 0.75);
+            --border-glow: rgba(255, 100, 180, 0.25);
+            --text-main: rgba(255, 255, 255, 0.92);
+            --text-muted: rgba(255, 255, 255, 0.5);
+            --color-pink: #ff6db2;
+            --color-cyan: #4dd9e8;
+            --font-sans: 'Inter', -apple-system, sans-serif;
+            --font-display: 'Outfit', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body,
+        html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-dark);
+            font-family: var(--font-sans);
+            color: var(--text-main);
+        }
+
+        /* Fullscreen WebGL Canvas */
+        #gl-canvas {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+
+        /* Floating Workspace Toolbar */
+        .viewer-toolbar {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-glow);
+            padding: 12px 24px;
+            border-radius: 14px;
+            display: flex;
+            gap: 25px;
+            align-items: center;
+            z-index: 100;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6);
+            transition: all 0.3s ease;
+        }
+
+        .toolbar-title {
+            font-family: var(--font-display);
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            background: linear-gradient(135deg, var(--color-pink), var(--color-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            border-right: 1px solid rgba(16, 185, 129, 0.2);
+            padding-right: 15px;
+            white-space: nowrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-label {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        select {
+            padding: 4px 8px;
+            font-size: 12px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-main);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            outline: none;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        select option {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+        }
+
+        select:focus {
+            border-color: var(--color-cyan);
+        }
+
+        input[type="range"] {
+            width: 70px;
+            cursor: pointer;
+            accent-color: var(--color-cyan);
+        }
+
+        /* Legend floating at the bottom */
+        .viewer-legend {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-glow);
+            padding: 8px 20px;
+            border-radius: 20px;
+            display: flex;
+            gap: 15px;
+            font-size: 11px;
+            color: var(--text-muted);
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        /* Loading Spinner Overlay */
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-dark);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            transition: opacity 0.5s ease;
+        }
+
+        .spinner {
+            width: 45px;
+            height: 45px;
+            border: 3px solid rgba(16, 185, 129, 0.15);
+            border-radius: 50%;
+            border-top-color: var(--color-pink);
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        .loading-text {
+            font-size: 14px;
+            font-family: var(--font-mono);
+            color: var(--color-cyan);
+            letter-spacing: 0.5px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .viewer-toolbar {
+                flex-wrap: wrap;
+                width: 90%;
+                justify-content: center;
+                gap: 12px;
+                top: 10px;
+            }
+
+            .toolbar-title {
+                border-right: none;
+                padding-right: 0;
+                width: 100%;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Loading Screen -->
+    <div id="loader" class="loading-overlay">
+        <div class="spinner"></div>
+        <div id="loader-text" class="loading-text">Fetching scan metadata...</div>
+    </div>
+
+    <!-- Floating Top Control Toolbar -->
+    <div class="viewer-toolbar">
+        <div class="toolbar-title" id="scan-title">NeuroSphere 3D</div>
+
+        <div class="control-group">
+            <label class="control-label" for="select-view">View</label>
+            <select id="select-view">
+                <option value="multi">Multi-Planar & 3D Volume</option>
+                <option value="3d">3D Volume Only</option>
+                <option value="axial">Axial</option>
+                <option value="coronal">Coronal</option>
+                <option value="sagittal">Sagittal</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label class="control-label">BG Opacity</label>
+            <input type="range" id="slider-bg" min="0" max="10" value="10">
+        </div>
+
+        <div class="control-group">
+            <label class="control-label">Overlay</label>
+            <input type="range" id="slider-overlay" min="0" max="10" value="6">
+        </div>
+    </div>
+
+    <!-- WebGL Canvas -->
+    <canvas id="gl-canvas"></canvas>
+
+    <!-- Floating Bottom Legend -->
+    <div class="viewer-legend">
+        <div class="legend-item">
+            <span class="legend-dot" style="background: #ffffff; border: 1px solid #475569;"></span>
+            CSF
+        </div>
+        <div class="legend-item">
+            <span class="legend-dot" style="background: #808080;"></span>
+            Gray Matter
+        </div>
+        <div class="legend-item">
+            <span class="legend-dot" style="background: #10b981;"></span>
+            White Matter
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const selectView = document.getElementById("select-view");
+            const sliderBg = document.getElementById("slider-bg");
+            const sliderOverlay = document.getElementById("slider-overlay");
+            const scanTitle = document.getElementById("scan-title");
+            const loader = document.getElementById("loader");
+            const loaderText = document.getElementById("loader-text");
+
+            let nvInstance = null;
+
+            // 1. Parse patient ID from URL query parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const patientId = urlParams.get('patient_id');
+
+            if (!patientId) {
+                loaderText.textContent = "Error: No patient_id specified in URL parameters.";
+                document.querySelector(".spinner").style.display = "none";
+                return;
+            }
+
+            // Update title
+            // Take prefix for a cleaner display
+            const shortId = patientId.split('-')[0] + '-' + (patientId.split('-')[1] || '') + '-' + (patientId.split('-')[2] || '');
+            scanTitle.textContent = shortId;
+
+            // 2. Fetch scan static NIfTI URLs from features endpoint
+            fetch(`/api/features/${patientId}`)
+                .then(res => {
+                    if (!res.ok) throw new Error("Patient metadata not found");
+                    return res.json();
+                })
+                .then(data => {
+                    if (!data.mri_url) {
+                        throw new Error("No 3D volume URL found in server response");
+                    }
+
+                    loaderText.textContent = "Loading 3D WebGL context...";
+
+                    // 3. Initialize NiiVue
+                    nvInstance = new niivue.Niivue({
+                        show3Dcrosshair: true,
+                        backColor: [0.051, 0.067, 0.09, 1.0], // Dark navy #0d1117
+                        crosshairColor: [1.0, 0.427, 0.698, 0.9], // Pink crosshair #ff6db2
+                    });
+
+                    nvInstance.attachTo("gl-canvas");
+
+                    // Show both 3D volume and multiplanar slices combined by default
+                    nvInstance.opts.multiplanarForceRender = true;
+
+                    // Setup UI event listeners
+                    setupControls();
+
+                    loaderText.textContent = "Streaming NIfTI volumes (this may take a few seconds)...";
+
+                    const volumes = [
+                        {
+                            url: data.mri_url,
+                            colorMap: "gray",
+                            opacity: parseFloat(sliderBg.value) / 10,
+                            visible: true
+                        }
+                    ];
+
+                    if (data.seg_url) {
+                        volumes.push({
+                            url: data.seg_url,
+                            colorMap: "spectrum",
+                            opacity: parseFloat(sliderOverlay.value) / 10,
+                            visible: true
+                        });
+                    } else {
+                        // Disable overlay control if no mask is present
+                        if (sliderOverlay) {
+                            sliderOverlay.disabled = true;
+                            sliderOverlay.style.opacity = "0.3";
+                            sliderOverlay.style.cursor = "not-allowed";
+                        }
+                        // Update label text
+                        const labels = document.querySelectorAll('.control-label');
+                        labels.forEach(l => {
+                            if (l.textContent === "Overlay") {
+                                l.textContent = "Overlay (None)";
+                                l.style.color = "rgba(255, 255, 255, 0.25)";
+                            }
+                        });
+                    }
+
+                    // 4. Load the volumes into NiiVue WebGL
+                    return nvInstance.loadVolumes(volumes);
+                })
+                .then(() => {
+                    // Success: Fade out loader
+                    loader.style.opacity = "0";
+                    setTimeout(() => {
+                        loader.style.display = "none";
+                    }, 500);
+                })
+                .catch(err => {
+                    console.error("NiiVue loading failed:", err);
+                    loaderText.textContent = `Error: ${err.message}`;
+                    document.querySelector(".spinner").style.display = "none";
+                });
+
+            function setupControls() {
+                if (!nvInstance) return;
+
+                // View Mode
+                selectView.addEventListener("change", (e) => {
+                    const val = e.target.value;
+                    if (val === "multi") {
+                        nvInstance.setSliceType(nvInstance.sliceTypeMultiplanar);
+                        nvInstance.opts.multiplanarForceRender = true;
+                    } else if (val === "3d") {
+                        nvInstance.setSliceType(nvInstance.sliceTypeRender);
+                        nvInstance.opts.multiplanarForceRender = false;
+                    } else if (val === "axial") {
+                        nvInstance.setSliceType(nvInstance.sliceTypeAxial);
+                        nvInstance.opts.multiplanarForceRender = false;
+                    } else if (val === "coronal") {
+                        nvInstance.setSliceType(nvInstance.sliceTypeCoronal);
+                        nvInstance.opts.multiplanarForceRender = false;
+                    } else if (val === "sagittal") {
+                        nvInstance.setSliceType(nvInstance.sliceTypeSagittal);
+                        nvInstance.opts.multiplanarForceRender = false;
+                    }
+                    nvInstance.updateGLVolume();
+                });
+
+                // Background Opacity
+                sliderBg.addEventListener("input", (e) => {
+                    const val = parseFloat(e.target.value) / 10;
+                    if (nvInstance.volumes.length > 0) {
+                        nvInstance.setOpacity(0, val);
+                        nvInstance.drawScene();
+                    }
+                });
+
+                // Overlay Opacity
+                sliderOverlay.addEventListener("input", (e) => {
+                    const val = parseFloat(e.target.value) / 10;
+                    if (nvInstance.volumes.length > 1) {
+                        nvInstance.setOpacity(1, val);
+                        nvInstance.drawScene();
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+
+</html>

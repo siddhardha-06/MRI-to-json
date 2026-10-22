@@ -1,0 +1,61 @@
+{
+  "unet3d_best.pth": {
+    "sha256": "24dcdc628ea5d1197a94f4f2631d2831bbff58ccbb159fef005dda742287a6e5",
+    "epoch_index": 49,
+    "best_val_dice": 0.8490618562828457,
+    "recipe": null
+  },
+  "unet3d_v2_best.pth": {
+    "sha256": "486e06e2f605f33514670d5264f29d5fae1dce565ad0b54c4ba82a7b4eb06ea6",
+    "epoch_index": 43,
+    "best_val_dice": 0.8702305681656379,
+    "recipe": {
+      "flip_mode": "swap",
+      "shift_vox": 5.0,
+      "intensity_aug": true,
+      "ce_class_weights": true,
+      "min_class_dice": 0.5,
+      "seed": 0,
+      "lr": 0.0001,
+      "epochs": 50
+    }
+  },
+  "unet3d_v2_best_last.pth": {
+    "sha256": "e6ba88c04ef267d558f38e51ff87750fac95284f09c3b40690dc9005cfbb8e54",
+    "epoch_index": 49,
+    "best_val_dice": 0.8702305681656379,
+    "recipe": {
+      "flip_mode": "swap",
+      "shift_vox": 5.0,
+      "intensity_aug": true,
+      "ce_class_weights": true,
+      "min_class_dice": 0.5,
+      "seed": 0,
+      "lr": 0.0001,
+      "epochs": 50
+    }
+  },
+  "training_command": "python train_unet3d.py --recipe v2 --epochs 50 --workers 4 --seed 0 --ckpt-name unet3d_v2_best.pth (code at commit 0fa1a41; epoch 1 in a first run, epochs 2-50 resumed from unet3d_v2_best_last.pth)",
+  "provenance": {
+    "pipeline_version": "2.0.0.dev1",
+    "git_commit": {
+      "sha": "b6922d22239832b731edab66f89305a24d98f7e0",
+      "dirty": false
+    },
+    "timestamp_utc": "2026-10-09T08:14:15+00:00",
+    "command": "-c",
+    "software": {
+      "python": "3.12.6",
+      "platform": "Windows-11-10.0.26300-SP0",
+      "numpy": "2.3.5",
+      "scipy": "1.15.3",
+      "nibabel": "5.4.2",
+      "torch": "2.6.0+cu124",
+      "antspyx": "0.6.3",
+      "scikit-learn": "1.9.0",
+      "scikit-image": "0.26.0",
+      "pandas": "3.0.3",
+      "pingouin": "0.7.0"
+    }
+  }
+}

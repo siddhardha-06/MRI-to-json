@@ -1,0 +1,48 @@
+{
+  "n": 576,
+  "by_confidence": {
+    "demographics_unique": 504,
+    "image_check_inconclusive": 1,
+    "verified_by_image": 71
+  },
+  "by_method": {
+    "demographics_exact": 554,
+    "order_constraint": 22
+  },
+  "image_verified_margin_min": -0.1349,
+  "image_verified_margin_median": 0.15439999999999998,
+  "contradiction_threshold_ncc": 0.8372,
+  "inconclusive_notes": {
+    "IXI430": "TransMorph subject_381 (Train) has a failed FreeSurfer skull strip (face/neck retained); no candidate matches well (mapped 0.62, best other 0.76 < threshold); demographics match exactly"
+  },
+  "not_in_transmorph": [
+    "IXI423",
+    "IXI426",
+    "IXI427",
+    "IXI547",
+    "IXI553"
+  ],
+  "method_notes": "step 1 scripts/map_transmorph_ixi.py (demographics vs IXI.xls); order constraint for the rest; step 3 scripts/refine_mapping_verification.py (candidate re-registration)",
+  "provenance": {
+    "pipeline_version": "2.0.0.dev1",
+    "git_commit": {
+      "sha": "3c94e39b8416b790c46ee3f72863bec3b0fa6ed9",
+      "dirty": true
+    },
+    "timestamp_utc": "2026-10-08T19:50:21+00:00",
+    "command": "scripts/verify_mapping.py --finalise",
+    "software": {
+      "python": "3.12.6",
+      "platform": "Windows-11-10.0.26300-SP0",
+      "numpy": "2.3.5",
+      "scipy": "1.15.3",
+      "nibabel": "5.4.2",
+      "torch": "2.6.0+cu124",
+      "antspyx": "0.6.3",
+      "scikit-learn": "1.9.0",
+      "scikit-image": "0.26.0",
+      "pandas": "3.0.3",
+      "pingouin": "0.7.0"
+    }
+  }
+}

@@ -1,0 +1,106 @@
+{
+  "split_counts": {
+    "train": 403,
+    "val": 58,
+    "test": 120
+  },
+  "balance": {
+    "train": {
+      "n": 403,
+      "age_n": 390,
+      "age_mean": 48.73,
+      "age_sd": 16.57,
+      "age_min": 20.1,
+      "age_max": 86.3,
+      "sex": {
+        "M": 171,
+        "F": 221,
+        "missing": 11
+      },
+      "site": {
+        "Guys": 228,
+        "HH": 123,
+        "IOP": 52
+      },
+      "age_missing_reasons": {
+        "subject not listed in IXI.xls": 10,
+        "duplicated IXI.xls rows disagree on AGE (53.08, 58.07)": 1,
+        "duplicated IXI.xls rows disagree on AGE (61.79, 62.08)": 1,
+        "AGE missing in IXI.xls": 1
+      }
+    },
+    "val": {
+      "n": 58,
+      "age_n": 57,
+      "age_mean": 46.94,
+      "age_sd": 16.27,
+      "age_min": 20.2,
+      "age_max": 86.2,
+      "sex": {
+        "M": 24,
+        "F": 33,
+        "missing": 1
+      },
+      "site": {
+        "Guys": 32,
+        "HH": 21,
+        "IOP": 5
+      },
+      "age_missing_reasons": {
+        "subject not listed in IXI.xls": 1
+      }
+    },
+    "test": {
+      "n": 120,
+      "age_n": 114,
+      "age_mean": 49.08,
+      "age_sd": 16.42,
+      "age_min": 20.0,
+      "age_max": 82.2,
+      "sex": {
+        "M": 58,
+        "F": 58,
+        "missing": 4
+      },
+      "site": {
+        "Guys": 62,
+        "HH": 41,
+        "IOP": 17
+      },
+      "age_missing_reasons": {
+        "subject not listed in IXI.xls": 4,
+        "AGE missing in IXI.xls": 2
+      }
+    }
+  },
+  "flags": {
+    "IXI430": "transmorph_image_defective"
+  },
+  "inputs": {
+    "transmorph_ixi_mapping.csv": "4e8092f249990bdd56bcf126979e352192333d7443d83c63c90a8045591874be",
+    "IXI.xls": "8880c4417d8c22f9489439f1b8977b1003ed7908be0294e44462aa71c2a3e78f"
+  },
+  "provenance": {
+    "pipeline_version": "2.0.0.dev1",
+    "git_commit": {
+      "sha": "161478d680741e53af207082a0bcfec654f94c9d",
+      "dirty": true
+    },
+    "timestamp_utc": "2026-10-09T09:15:25+00:00",
+    "command": "scripts/make_final_split.py",
+    "software": {
+      "python": "3.12.6",
+      "platform": "Windows-11-10.0.26300-SP0",
+      "numpy": "2.3.5",
+      "scipy": "1.15.3",
+      "nibabel": "5.4.2",
+      "torch": "2.6.0+cu124",
+      "antspyx": "0.6.3",
+      "scikit-learn": "1.9.0",
+      "scikit-image": "0.26.0",
+      "pandas": "3.0.3",
+      "pingouin": "0.7.0"
+    },
+    "seed": 42
+  }
+}

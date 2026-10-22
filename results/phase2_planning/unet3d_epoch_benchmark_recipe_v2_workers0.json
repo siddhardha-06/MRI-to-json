@@ -1,0 +1,53 @@
+{
+  "what": "throughput of the current 3D U-Net training loop (batch 1, AMP), extrapolated to one epoch",
+  "n_train_subjects": 403,
+  "n_val_subjects": 58,
+  "measured_train_steps": 30,
+  "warmup_steps_excluded": 3,
+  "measured_val_subjects": 10,
+  "data_load_s_per_iter": {
+    "mean": 0.9489280666669705,
+    "median": 0.4312014999995881
+  },
+  "gpu_step_s_per_iter": {
+    "mean": 0.5916852666666575,
+    "median": 0.5290675500018551
+  },
+  "val_s_per_subject": {
+    "mean": 0.9472142900009203
+  },
+  "estimated_epoch_s": 675.8056021535054,
+  "estimated_epoch_min": 11.263426702558425,
+  "estimated_hours_for_epochs": {
+    "50": 9.39,
+    "100": 18.77,
+    "150": 28.16
+  },
+  "peak_vram_gib": 6.527326583862305,
+  "device": "NVIDIA GeForce RTX 4060 Laptop GPU",
+  "recipe": "v2",
+  "provenance": {
+    "pipeline_version": "2.0.0.dev1",
+    "git_commit": {
+      "sha": "702d90efe7196ab72ea73a72bd5aea28dd41ece0",
+      "dirty": true
+    },
+    "timestamp_utc": "2026-10-08T19:53:40+00:00",
+    "command": "scripts/benchmark_unet_epoch.py --recipe v2",
+    "software": {
+      "python": "3.12.6",
+      "platform": "Windows-11-10.0.26300-SP0",
+      "numpy": "2.3.5",
+      "scipy": "1.15.3",
+      "nibabel": "5.4.2",
+      "torch": "2.6.0+cu124",
+      "antspyx": "0.6.3",
+      "scikit-learn": "1.9.0",
+      "scikit-image": "0.26.0",
+      "pandas": "3.0.3",
+      "pingouin": "0.7.0"
+    },
+    "seed": 0,
+    "data_subset": "IXI_data/Train first 33 shuffled, IXI_data/Val first 10"
+  }
+}

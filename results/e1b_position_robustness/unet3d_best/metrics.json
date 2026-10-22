@@ -1,0 +1,196 @@
+{
+  "checkpoint": {
+    "file": "unet3d_best.pth",
+    "sha256": "24dcdc628ea5d1197a94f4f2631d2831bbff58ccbb159fef005dda742287a6e5"
+  },
+  "n_subjects": 40,
+  "axes": {
+    "0": "left-right (LIA axis 0)",
+    "2": "posterior-anterior"
+  },
+  "by_shift": {
+    "axis0_-6": {
+      "n": 40,
+      "mean_fg_dice": 0.09182949817585742,
+      "ci95": [
+        0.09122117061069543,
+        0.09239815839163865
+      ],
+      "subjects_with_any_side_error": 40,
+      "subjects_with_majority_swapped": 40
+    },
+    "axis0_-4": {
+      "n": 40,
+      "mean_fg_dice": 0.09903983837516042,
+      "ci95": [
+        0.0950879052359152,
+        0.10361957480476214
+      ],
+      "subjects_with_any_side_error": 40,
+      "subjects_with_majority_swapped": 40
+    },
+    "axis0_-3": {
+      "n": 40,
+      "mean_fg_dice": 0.4629146145830784,
+      "ci95": [
+        0.37675727486756855,
+        0.5475244063260738
+      ],
+      "subjects_with_any_side_error": 30,
+      "subjects_with_majority_swapped": 19
+    },
+    "axis0_-2": {
+      "n": 40,
+      "mean_fg_dice": 0.8381235454612902,
+      "ci95": [
+        0.8265776226070707,
+        0.8464926506117871
+      ],
+      "subjects_with_any_side_error": 1,
+      "subjects_with_majority_swapped": 0
+    },
+    "axis0_-1": {
+      "n": 40,
+      "mean_fg_dice": 0.849706833020317,
+      "ci95": [
+        0.8463474790653921,
+        0.8527315359276098
+      ],
+      "subjects_with_any_side_error": 0,
+      "subjects_with_majority_swapped": 0
+    },
+    "axis0_+0": {
+      "n": 40,
+      "mean_fg_dice": 0.8507269543251645,
+      "ci95": [
+        0.8474234558935482,
+        0.8538162720628704
+      ],
+      "subjects_with_any_side_error": 0,
+      "subjects_with_majority_swapped": 0
+    },
+    "axis0_+1": {
+      "n": 40,
+      "mean_fg_dice": 0.849431436899334,
+      "ci95": [
+        0.846091358652511,
+        0.852631335418944
+      ],
+      "subjects_with_any_side_error": 0,
+      "subjects_with_majority_swapped": 0
+    },
+    "axis0_+2": {
+      "n": 40,
+      "mean_fg_dice": 0.8460971113677044,
+      "ci95": [
+        0.8424994508252446,
+        0.8493680442248545
+      ],
+      "subjects_with_any_side_error": 0,
+      "subjects_with_majority_swapped": 0
+    },
+    "axis0_+3": {
+      "n": 40,
+      "mean_fg_dice": 0.8413343112605876,
+      "ci95": [
+        0.8374585232520723,
+        0.8448535215419006
+      ],
+      "subjects_with_any_side_error": 0,
+      "subjects_with_majority_swapped": 0
+    },
+    "axis0_+4": {
+      "n": 40,
+      "mean_fg_dice": 0.8208390331639104,
+      "ci95": [
+        0.8082980484162089,
+        0.831380297466811
+      ],
+      "subjects_with_any_side_error": 0,
+      "subjects_with_majority_swapped": 0
+    },
+    "axis0_+6": {
+      "n": 40,
+      "mean_fg_dice": 0.21995515000058044,
+      "ci95": [
+        0.1879890945521681,
+        0.2545370175527994
+      ],
+      "subjects_with_any_side_error": 40,
+      "subjects_with_majority_swapped": 37
+    },
+    "axis2_-6": {
+      "n": 40,
+      "mean_fg_dice": 0.8420310240222764,
+      "ci95": [
+        0.8387817889926951,
+        0.8450303547717485
+      ],
+      "subjects_with_any_side_error": 0,
+      "subjects_with_majority_swapped": 0
+    },
+    "axis2_-3": {
+      "n": 40,
+      "mean_fg_dice": 0.8468222658882268,
+      "ci95": [
+        0.8432961128828019,
+        0.8499277688941581
+      ],
+      "subjects_with_any_side_error": 0,
+      "subjects_with_majority_swapped": 0
+    },
+    "axis2_+0": {
+      "n": 40,
+      "mean_fg_dice": 0.8507269543251645,
+      "ci95": [
+        0.8474234558935482,
+        0.8538162720628704
+      ],
+      "subjects_with_any_side_error": 0,
+      "subjects_with_majority_swapped": 0
+    },
+    "axis2_+3": {
+      "n": 40,
+      "mean_fg_dice": 0.8471998955488405,
+      "ci95": [
+        0.8440392745341905,
+        0.8502278631462823
+      ],
+      "subjects_with_any_side_error": 0,
+      "subjects_with_majority_swapped": 0
+    },
+    "axis2_+6": {
+      "n": 40,
+      "mean_fg_dice": 0.8428305481148414,
+      "ci95": [
+        0.8395655064256093,
+        0.8460215030994298
+      ],
+      "subjects_with_any_side_error": 0,
+      "subjects_with_majority_swapped": 0
+    }
+  },
+  "provenance": {
+    "pipeline_version": "2.0.0.dev1",
+    "git_commit": {
+      "sha": "b6922d22239832b731edab66f89305a24d98f7e0",
+      "dirty": false
+    },
+    "timestamp_utc": "2026-10-09T08:09:13+00:00",
+    "command": "experiments/e1b_position_robustness.py --ckpt unet3d_best.pth --limit 40",
+    "software": {
+      "python": "3.12.6",
+      "platform": "Windows-11-10.0.26300-SP0",
+      "numpy": "2.3.5",
+      "scipy": "1.15.3",
+      "nibabel": "5.4.2",
+      "torch": "2.6.0+cu124",
+      "antspyx": "0.6.3",
+      "scikit-learn": "1.9.0",
+      "scikit-image": "0.26.0",
+      "pandas": "3.0.3",
+      "pingouin": "0.7.0"
+    },
+    "data_subset": "IXI_data/Test first 40"
+  }
+}

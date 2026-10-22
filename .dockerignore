@@ -1,0 +1,32 @@
+.venv/
+.git/
+**/__pycache__/
+*.pyc
+.vscode/
+.env
+# data, weights, outputs (mounted at run time, never baked in)
+ixi-t1/
+IXI_data/
+uploads/
+uploads-masks/
+work/
+results/
+checkpoints/
+*.nii
+*.nii.gz
+*.pkl
+*.pth
+*.mgz
+*.json.tmp
+rule_based_features*.json
+# not needed at runtime
+legacy/
+audit/
+tests/
+docs/
+scripts/
+data/
+*.md
+*.docx
+*.txt
+!requirements.txt

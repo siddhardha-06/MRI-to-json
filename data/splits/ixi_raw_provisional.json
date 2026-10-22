@@ -1,0 +1,54 @@
+{
+  "status": "PROVISIONAL",
+  "status_reason": "final splits follow the Phase 2 TransMorph<->IXI mapping",
+  "n_subjects": 581,
+  "seed": 42,
+  "fractions_train_val_test": [
+    0.7,
+    0.1,
+    0.2
+  ],
+  "cv_folds_over_train_val": 5,
+  "stratified_by": "site",
+  "counts_by_split_and_site": {
+    "train": {
+      "HH": 130,
+      "Guys": 226,
+      "IOP": 52
+    },
+    "val": {
+      "Guys": 32,
+      "HH": 18,
+      "IOP": 7
+    },
+    "test": {
+      "Guys": 64,
+      "HH": 37,
+      "IOP": 15
+    }
+  },
+  "provenance": {
+    "pipeline_version": "2.0.0.dev1",
+    "git_commit": {
+      "sha": "d01c82054faa34e2564a4825f85101e37fbe93bf",
+      "dirty": true
+    },
+    "timestamp_utc": "2026-10-07T20:25:22+00:00",
+    "command": "scripts/make_provisional_split.py",
+    "software": {
+      "python": "3.12.6",
+      "platform": "Windows-11-10.0.26300-SP0",
+      "numpy": "2.3.5",
+      "scipy": "1.15.3",
+      "nibabel": "5.4.2",
+      "torch": "2.6.0+cu124",
+      "antspyx": "0.6.3",
+      "scikit-learn": "1.9.0",
+      "scikit-image": "0.26.0",
+      "pandas": "3.0.3",
+      "pingouin": "0.7.0"
+    },
+    "seed": 42,
+    "data_subset": "ixi-t1/ raw scans (derived files excluded)"
+  }
+}

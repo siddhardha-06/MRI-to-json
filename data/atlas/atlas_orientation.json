@@ -1,0 +1,72 @@
+{
+  "axcodes": "LIA",
+  "shape": [
+    160,
+    192,
+    224
+  ],
+  "voxel_mm": 1.0,
+  "checks": {
+    "left_hippocampus_is_left_of_right (x_L < x_R)": true,
+    "thalamus_is_superior_to_brainstem (z_thal > z_bs)": true,
+    "caudate_is_anterior_to_4th_ventricle (y_caud > y_v4)": true
+  },
+  "centroids_world_mm": {
+    "L_hippocampus": [
+      -24.4,
+      -8.7,
+      -17.8
+    ],
+    "R_hippocampus": [
+      26.8,
+      -7.7,
+      -17.7
+    ],
+    "thalamus": [
+      0.7,
+      -4.0,
+      3.3
+    ],
+    "brain_stem": [
+      1.1,
+      -17.6,
+      -34.5
+    ],
+    "caudate": [
+      1.0,
+      24.2,
+      6.4
+    ],
+    "4th_ventricle": [
+      0.6,
+      -32.4,
+      -36.8
+    ]
+  },
+  "source": {
+    "file": "IXI_data/atlas.pkl",
+    "sha256": "fc2044d58f0671e3260629b0a0b588b5ef60ea0a092c13881bfd081488b0fdde"
+  },
+  "provenance": {
+    "pipeline_version": "2.0.0.dev1",
+    "git_commit": {
+      "sha": "3c94e39b8416b790c46ee3f72863bec3b0fa6ed9",
+      "dirty": true
+    },
+    "timestamp_utc": "2026-10-08T18:35:06+00:00",
+    "command": "scripts/make_atlas_nifti.py",
+    "software": {
+      "python": "3.12.6",
+      "platform": "Windows-11-10.0.26300-SP0",
+      "numpy": "2.3.5",
+      "scipy": "1.15.3",
+      "nibabel": "5.4.2",
+      "torch": "2.6.0+cu124",
+      "antspyx": "0.6.3",
+      "scikit-learn": "1.9.0",
+      "scikit-image": "0.26.0",
+      "pandas": "3.0.3",
+      "pingouin": "0.7.0"
+    }
+  }
+}

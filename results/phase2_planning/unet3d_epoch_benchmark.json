@@ -1,0 +1,53 @@
+{
+  "what": "throughput of the current 3D U-Net training loop (batch 1, AMP), extrapolated to one epoch",
+  "n_train_subjects": 403,
+  "n_val_subjects": 58,
+  "measured_train_steps": 30,
+  "warmup_steps_excluded": 3,
+  "measured_val_subjects": 10,
+  "data_load_s_per_iter": {
+    "mean": 0.20723642333371875,
+    "median": 0.20921400000042922
+  },
+  "gpu_step_s_per_iter": {
+    "mean": 0.5801861433329274,
+    "median": 0.5800580499981152
+  },
+  "val_s_per_subject": {
+    "mean": 0.9488247000004776
+  },
+  "estimated_epoch_s": 372.3631269666861,
+  "estimated_epoch_min": 6.206052116111435,
+  "estimated_hours_for_epochs": {
+    "50": 5.17,
+    "100": 10.34,
+    "150": 15.52
+  },
+  "peak_vram_gib": 6.5273261070251465,
+  "device": "NVIDIA GeForce RTX 4060 Laptop GPU",
+  "excludes": "TorchIO intensity augmentation (not installed yet); label-swap flip is an index remap (negligible)",
+  "provenance": {
+    "pipeline_version": "2.0.0.dev1",
+    "git_commit": {
+      "sha": "d01c82054faa34e2564a4825f85101e37fbe93bf",
+      "dirty": true
+    },
+    "timestamp_utc": "2026-10-07T20:26:54+00:00",
+    "command": "scripts/benchmark_unet_epoch.py",
+    "software": {
+      "python": "3.12.6",
+      "platform": "Windows-11-10.0.26300-SP0",
+      "numpy": "2.3.5",
+      "scipy": "1.15.3",
+      "nibabel": "5.4.2",
+      "torch": "2.6.0+cu124",
+      "antspyx": "0.6.3",
+      "scikit-learn": "1.9.0",
+      "scikit-image": "0.26.0",
+      "pandas": "3.0.3",
+      "pingouin": "0.7.0"
+    },
+    "seed": 0,
+    "data_subset": "IXI_data/Train first 33 shuffled, IXI_data/Val first 10"
+  }
+}

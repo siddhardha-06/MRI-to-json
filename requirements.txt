@@ -1,0 +1,32 @@
+# Direct dependencies, pinned to the versions in the development venv (v2 Phase 1).
+# Full transitive lock: requirements-lock.txt (pip freeze). Install with the torch constraint:
+#   .\.venv\Scripts\python -m pip install -c constraints.txt -r requirements.txt
+# torch/torchvision/torchaudio are the CUDA 12.4 builds (index https://download.pytorch.org/whl/cu124).
+
+# core
+numpy==2.3.5
+scipy==1.15.3
+nibabel==5.4.2
+scikit-image==0.26.0
+scikit-learn==1.9.0
+pandas==3.0.3
+statsmodels==0.14.6
+matplotlib==3.11.0
+tqdm==4.68.2
+torch==2.6.0+cu124
+torchvision==0.21.0+cu124
+torchaudio==2.6.0+cu124
+antspyx==0.6.3
+
+# evaluation, schema, data
+pingouin==0.7.0
+jsonschema==4.26.0
+xlrd==2.0.2
+
+# use case (Gemini)
+google-genai==2.28.0
+
+# tests
+pytest==9.1.1
+
+# Planned (install later, always with -c constraints.txt): torchio, monai, hd-bet (ENV.md).

@@ -1,0 +1,20 @@
+services:
+  neurosphere:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: neurosphere:dev
+    container_name: neurosphere
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./uploads:/app/uploads          # user uploads
+      - ./work:/app/work                # derived output (MRIQC runs, caches)
+      - ./ixi-t1:/app/ixi-t1:ro         # raw dataset, read-only
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/status')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s

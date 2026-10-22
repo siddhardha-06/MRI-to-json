@@ -1,0 +1,1770 @@
+{
+ "schema_version": "2.0.0",
+ "features": [
+  {
+   "path": "volumes_ml.left_cerebral_white_matter",
+   "description": "Left cerebral white matter (excludes corpus callosum) volume",
+   "unit": "mL",
+   "label": 2,
+   "precision": 3,
+   "compact": "v.lcwm",
+   "obfuscated": "f001"
+  },
+  {
+   "path": "volumes_ml.left_cerebral_cortex",
+   "description": "Left cerebral cortex (FreeSurfer aseg volumetric definition) volume",
+   "unit": "mL",
+   "label": 3,
+   "precision": 3,
+   "compact": "v.lceco",
+   "obfuscated": "f002"
+  },
+  {
+   "path": "volumes_ml.left_lateral_ventricle",
+   "description": "Left lateral ventricle volume",
+   "unit": "mL",
+   "label": 4,
+   "precision": 3,
+   "compact": "v.llave",
+   "obfuscated": "f003"
+  },
+  {
+   "path": "volumes_ml.left_cerebellum_white_matter",
+   "description": "Left cerebellar white matter volume",
+   "unit": "mL",
+   "label": 7,
+   "precision": 3,
+   "compact": "v.lcwm2",
+   "obfuscated": "f004"
+  },
+  {
+   "path": "volumes_ml.left_cerebellum_cortex",
+   "description": "Left cerebellar cortex volume",
+   "unit": "mL",
+   "label": 8,
+   "precision": 3,
+   "compact": "v.lceco2",
+   "obfuscated": "f005"
+  },
+  {
+   "path": "volumes_ml.left_thalamus",
+   "description": "Left thalamus volume",
+   "unit": "mL",
+   "label": 10,
+   "precision": 3,
+   "compact": "v.lth",
+   "obfuscated": "f006"
+  },
+  {
+   "path": "volumes_ml.left_caudate",
+   "description": "Left caudate volume",
+   "unit": "mL",
+   "label": 11,
+   "precision": 3,
+   "compact": "v.lca",
+   "obfuscated": "f007"
+  },
+  {
+   "path": "volumes_ml.left_putamen",
+   "description": "Left putamen volume",
+   "unit": "mL",
+   "label": 12,
+   "precision": 3,
+   "compact": "v.lpu",
+   "obfuscated": "f008"
+  },
+  {
+   "path": "volumes_ml.left_pallidum",
+   "description": "Left pallidum volume",
+   "unit": "mL",
+   "label": 13,
+   "precision": 3,
+   "compact": "v.lpa",
+   "obfuscated": "f009"
+  },
+  {
+   "path": "volumes_ml.third_ventricle",
+   "description": "Third ventricle volume",
+   "unit": "mL",
+   "label": 14,
+   "precision": 3,
+   "compact": "v.thve",
+   "obfuscated": "f010"
+  },
+  {
+   "path": "volumes_ml.fourth_ventricle",
+   "description": "Fourth ventricle volume",
+   "unit": "mL",
+   "label": 15,
+   "precision": 3,
+   "compact": "v.fove",
+   "obfuscated": "f011"
+  },
+  {
+   "path": "volumes_ml.brain_stem",
+   "description": "Brain stem volume",
+   "unit": "mL",
+   "label": 16,
+   "precision": 3,
+   "compact": "v.brst",
+   "obfuscated": "f012"
+  },
+  {
+   "path": "volumes_ml.left_hippocampus",
+   "description": "Left hippocampus volume",
+   "unit": "mL",
+   "label": 17,
+   "precision": 3,
+   "compact": "v.lhi",
+   "obfuscated": "f013"
+  },
+  {
+   "path": "volumes_ml.left_amygdala",
+   "description": "Left amygdala volume",
+   "unit": "mL",
+   "label": 18,
+   "precision": 3,
+   "compact": "v.lam",
+   "obfuscated": "f014"
+  },
+  {
+   "path": "volumes_ml.left_accumbens",
+   "description": "Left nucleus accumbens volume",
+   "unit": "mL",
+   "label": 26,
+   "precision": 3,
+   "compact": "v.lac",
+   "obfuscated": "f015"
+  },
+  {
+   "path": "volumes_ml.left_ventral_dc",
+   "description": "Left ventral diencephalon volume",
+   "unit": "mL",
+   "label": 28,
+   "precision": 3,
+   "compact": "v.lvedc",
+   "obfuscated": "f016"
+  },
+  {
+   "path": "volumes_ml.right_cerebral_white_matter",
+   "description": "Right cerebral white matter (excludes corpus callosum) volume",
+   "unit": "mL",
+   "label": 41,
+   "precision": 3,
+   "compact": "v.rcwm",
+   "obfuscated": "f017"
+  },
+  {
+   "path": "volumes_ml.right_cerebral_cortex",
+   "description": "Right cerebral cortex (FreeSurfer aseg volumetric definition) volume",
+   "unit": "mL",
+   "label": 42,
+   "precision": 3,
+   "compact": "v.rceco",
+   "obfuscated": "f018"
+  },
+  {
+   "path": "volumes_ml.right_lateral_ventricle",
+   "description": "Right lateral ventricle volume",
+   "unit": "mL",
+   "label": 43,
+   "precision": 3,
+   "compact": "v.rlave",
+   "obfuscated": "f019"
+  },
+  {
+   "path": "volumes_ml.right_cerebellum_white_matter",
+   "description": "Right cerebellar white matter volume",
+   "unit": "mL",
+   "label": 46,
+   "precision": 3,
+   "compact": "v.rcwm2",
+   "obfuscated": "f020"
+  },
+  {
+   "path": "volumes_ml.right_cerebellum_cortex",
+   "description": "Right cerebellar cortex volume",
+   "unit": "mL",
+   "label": 47,
+   "precision": 3,
+   "compact": "v.rceco2",
+   "obfuscated": "f021"
+  },
+  {
+   "path": "volumes_ml.right_thalamus",
+   "description": "Right thalamus volume",
+   "unit": "mL",
+   "label": 49,
+   "precision": 3,
+   "compact": "v.rth",
+   "obfuscated": "f022"
+  },
+  {
+   "path": "volumes_ml.right_caudate",
+   "description": "Right caudate volume",
+   "unit": "mL",
+   "label": 50,
+   "precision": 3,
+   "compact": "v.rca",
+   "obfuscated": "f023"
+  },
+  {
+   "path": "volumes_ml.right_putamen",
+   "description": "Right putamen volume",
+   "unit": "mL",
+   "label": 51,
+   "precision": 3,
+   "compact": "v.rpu",
+   "obfuscated": "f024"
+  },
+  {
+   "path": "volumes_ml.right_pallidum",
+   "description": "Right pallidum volume",
+   "unit": "mL",
+   "label": 52,
+   "precision": 3,
+   "compact": "v.rpa",
+   "obfuscated": "f025"
+  },
+  {
+   "path": "volumes_ml.right_hippocampus",
+   "description": "Right hippocampus volume",
+   "unit": "mL",
+   "label": 53,
+   "precision": 3,
+   "compact": "v.rhi",
+   "obfuscated": "f026"
+  },
+  {
+   "path": "volumes_ml.right_amygdala",
+   "description": "Right amygdala volume",
+   "unit": "mL",
+   "label": 54,
+   "precision": 3,
+   "compact": "v.ram",
+   "obfuscated": "f027"
+  },
+  {
+   "path": "volumes_ml.right_accumbens",
+   "description": "Right nucleus accumbens volume",
+   "unit": "mL",
+   "label": 58,
+   "precision": 3,
+   "compact": "v.rac",
+   "obfuscated": "f028"
+  },
+  {
+   "path": "volumes_ml.right_ventral_dc",
+   "description": "Right ventral diencephalon volume",
+   "unit": "mL",
+   "label": 60,
+   "precision": 3,
+   "compact": "v.rvedc",
+   "obfuscated": "f029"
+  },
+  {
+   "path": "volumes_ml.total_cerebral_white_matter",
+   "description": "Left + right cerebral white matter volume",
+   "unit": "mL",
+   "precision": 3,
+   "compact": "v.tcwm",
+   "obfuscated": "f030"
+  },
+  {
+   "path": "asymmetry_index_pct.cerebral_white_matter",
+   "description": "Signed asymmetry (L-R)/((L+R)/2) x 100 of the cerebral white matter",
+   "unit": "%",
+   "precision": 2,
+   "compact": "ai.cwm",
+   "obfuscated": "f031"
+  },
+  {
+   "path": "volumes_ml.total_cerebral_cortex",
+   "description": "Left + right cerebral cortex volume",
+   "unit": "mL",
+   "precision": 3,
+   "compact": "v.tcc",
+   "obfuscated": "f032"
+  },
+  {
+   "path": "asymmetry_index_pct.cerebral_cortex",
+   "description": "Signed asymmetry (L-R)/((L+R)/2) x 100 of the cerebral cortex",
+   "unit": "%",
+   "precision": 2,
+   "compact": "ai.ceco",
+   "obfuscated": "f033"
+  },
+  {
+   "path": "volumes_ml.total_lateral_ventricle",
+   "description": "Left + right lateral ventricle volume",
+   "unit": "mL",
+   "precision": 3,
+   "compact": "v.tlv",
+   "obfuscated": "f034"
+  },
+  {
+   "path": "asymmetry_index_pct.lateral_ventricle",
+   "description": "Signed asymmetry (L-R)/((L+R)/2) x 100 of the lateral ventricle",
+   "unit": "%",
+   "precision": 2,
+   "compact": "ai.lave",
+   "obfuscated": "f035"
+  },
+  {
+   "path": "volumes_ml.total_cerebellum_white_matter",
+   "description": "Left + right cerebellum white matter volume",
+   "unit": "mL",
+   "precision": 3,
+   "compact": "v.tcwm2",
+   "obfuscated": "f036"
+  },
+  {
+   "path": "asymmetry_index_pct.cerebellum_white_matter",
+   "description": "Signed asymmetry (L-R)/((L+R)/2) x 100 of the cerebellum white matter",
+   "unit": "%",
+   "precision": 2,
+   "compact": "ai.cwm2",
+   "obfuscated": "f037"
+  },
+  {
+   "path": "volumes_ml.total_cerebellum_cortex",
+   "description": "Left + right cerebellum cortex volume",
+   "unit": "mL",
+   "precision": 3,
+   "compact": "v.tcc2",
+   "obfuscated": "f038"
+  },
+  {
+   "path": "asymmetry_index_pct.cerebellum_cortex",
+   "description": "Signed asymmetry (L-R)/((L+R)/2) x 100 of the cerebellum cortex",
+   "unit": "%",
+   "precision": 2,
+   "compact": "ai.ceco2",
+   "obfuscated": "f039"
+  },
+  {
+   "path": "volumes_ml.total_thalamus",
+   "description": "Left + right thalamus volume",
+   "unit": "mL",
+   "precision": 3,
+   "compact": "v.toth",
+   "obfuscated": "f040"
+  },
+  {
+   "path": "asymmetry_index_pct.thalamus",
+   "description": "Signed asymmetry (L-R)/((L+R)/2) x 100 of the thalamus",
+   "unit": "%",
+   "precision": 2,
+   "compact": "ai.th",
+   "obfuscated": "f041"
+  },
+  {
+   "path": "volumes_ml.total_caudate",
+   "description": "Left + right caudate volume",
+   "unit": "mL",
+   "precision": 3,
+   "compact": "v.toca",
+   "obfuscated": "f042"
+  },
+  {
+   "path": "asymmetry_index_pct.caudate",
+   "description": "Signed asymmetry (L-R)/((L+R)/2) x 100 of the caudate",
+   "unit": "%",
+   "precision": 2,
+   "compact": "ai.ca",
+   "obfuscated": "f043"
+  },
+  {
+   "path": "volumes_ml.total_putamen",
+   "description": "Left + right putamen volume",
+   "unit": "mL",
+   "precision": 3,
+   "compact": "v.topu",
+   "obfuscated": "f044"
+  },
+  {
+   "path": "asymmetry_index_pct.putamen",
+   "description": "Signed asymmetry (L-R)/((L+R)/2) x 100 of the putamen",
+   "unit": "%",
+   "precision": 2,
+   "compact": "ai.pu",
+   "obfuscated": "f045"
+  },
+  {
+   "path": "volumes_ml.total_pallidum",
+   "description": "Left + right pallidum volume",
+   "unit": "mL",
+   "precision": 3,
+   "compact": "v.topa",
+   "obfuscated": "f046"
+  },
+  {
+   "path": "asymmetry_index_pct.pallidum",
+   "description": "Signed asymmetry (L-R)/((L+R)/2) x 100 of the pallidum",
+   "unit": "%",
+   "precision": 2,
+   "compact": "ai.pa",
+   "obfuscated": "f047"
+  },
+  {
+   "path": "volumes_ml.total_hippocampus",
+   "description": "Left + right hippocampus volume",
+   "unit": "mL",
+   "precision": 3,
+   "compact": "v.tohi",
+   "obfuscated": "f048"
+  },
+  {
+   "path": "asymmetry_index_pct.hippocampus",
+   "description": "Signed asymmetry (L-R)/((L+R)/2) x 100 of the hippocampus",
+   "unit": "%",
+   "precision": 2,
+   "compact": "ai.hi",
+   "obfuscated": "f049"
+  },
+  {
+   "path": "volumes_ml.total_amygdala",
+   "description": "Left + right amygdala volume",
+   "unit": "mL",
+   "precision": 3,
+   "compact": "v.toam",
+   "obfuscated": "f050"
+  },
+  {
+   "path": "asymmetry_index_pct.amygdala",
+   "description": "Signed asymmetry (L-R)/((L+R)/2) x 100 of the amygdala",
+   "unit": "%",
+   "precision": 2,
+   "compact": "ai.am",
+   "obfuscated": "f051"
+  },
+  {
+   "path": "volumes_ml.total_accumbens",
+   "description": "Left + right accumbens volume",
+   "unit": "mL",
+   "precision": 3,
+   "compact": "v.toac",
+   "obfuscated": "f052"
+  },
+  {
+   "path": "asymmetry_index_pct.accumbens",
+   "description": "Signed asymmetry (L-R)/((L+R)/2) x 100 of the accumbens",
+   "unit": "%",
+   "precision": 2,
+   "compact": "ai.ac",
+   "obfuscated": "f053"
+  },
+  {
+   "path": "volumes_ml.total_ventral_dc",
+   "description": "Left + right ventral dc volume",
+   "unit": "mL",
+   "precision": 3,
+   "compact": "v.tvd",
+   "obfuscated": "f054"
+  },
+  {
+   "path": "asymmetry_index_pct.ventral_dc",
+   "description": "Signed asymmetry (L-R)/((L+R)/2) x 100 of the ventral dc",
+   "unit": "%",
+   "precision": 2,
+   "compact": "ai.vedc",
+   "obfuscated": "f055"
+  },
+  {
+   "path": "tissue.gray_matter_ml",
+   "description": "Total gray matter (cortical, cerebellar cortex, deep gray)",
+   "unit": "mL",
+   "precision": 1,
+   "compact": "t.gmm",
+   "obfuscated": "f056"
+  },
+  {
+   "path": "tissue.white_matter_ml",
+   "description": "Total white matter (cerebral and cerebellar, excludes corpus callosum)",
+   "unit": "mL",
+   "precision": 1,
+   "compact": "t.wmm",
+   "obfuscated": "f057"
+  },
+  {
+   "path": "tissue.ventricular_csf_ml",
+   "description": "Lateral, third and fourth ventricles",
+   "unit": "mL",
+   "precision": 2,
+   "compact": "t.vcm",
+   "obfuscated": "f058"
+  },
+  {
+   "path": "tissue.brain_parenchyma_ml",
+   "description": "Gray + white matter + brain stem",
+   "unit": "mL",
+   "precision": 1,
+   "compact": "t.bpm",
+   "obfuscated": "f059"
+  },
+  {
+   "path": "tissue.brain_parenchymal_fraction",
+   "description": "Brain parenchyma / eTIV",
+   "unit": "ratio",
+   "precision": 4,
+   "compact": "t.bpf",
+   "obfuscated": "f060"
+  },
+  {
+   "path": "tissue.gm_wm_volume_ratio",
+   "description": "Gray matter / white matter volume",
+   "unit": "ratio",
+   "precision": 4,
+   "compact": "t.gwvr",
+   "obfuscated": "f061"
+  },
+  {
+   "path": "tissue.ventricle_brain_ratio",
+   "description": "Ventricular CSF / brain parenchyma",
+   "unit": "ratio",
+   "precision": 4,
+   "compact": "t.vbr",
+   "obfuscated": "f062"
+  },
+  {
+   "path": "etiv_ml.value",
+   "description": "Estimated total intracranial volume",
+   "unit": "mL",
+   "precision": 1,
+   "compact": "etiv",
+   "obfuscated": "f063"
+  },
+  {
+   "path": "brain_mask_ml",
+   "description": "HD-BET brain-mask volume",
+   "unit": "mL",
+   "precision": 1,
+   "compact": "bm",
+   "obfuscated": "f064"
+  },
+  {
+   "path": "normalized_volumes_pct_etiv.left_cerebral_white_matter",
+   "description": "Left cerebral white matter (excludes corpus callosum) volume as % of eTIV",
+   "unit": "% eTIV",
+   "precision": 4,
+   "compact": "nv.lcwm",
+   "obfuscated": "f065"
+  },
+  {
+   "path": "normalized_volumes_pct_etiv.left_cerebral_cortex",
+   "description": "Left cerebral cortex (FreeSurfer aseg volumetric definition) volume as % of eTIV",
+   "unit": "% eTIV",
+   "precision": 4,
+   "compact": "nv.lceco",
+   "obfuscated": "f066"
+  },
+  {
+   "path": "normalized_volumes_pct_etiv.left_lateral_ventricle",
+   "description": "Left lateral ventricle volume as % of eTIV",
+   "unit": "% eTIV",
+   "precision": 4,
+   "compact": "nv.llave",
+   "obfuscated": "f067"
+  },
+  {
+   "path": "normalized_volumes_pct_etiv.left_cerebellum_white_matter",
+   "description": "Left cerebellar white matter volume as % of eTIV",
+   "unit": "% eTIV",
+   "precision": 4,
+   "compact": "nv.lcwm2",
+   "obfuscated": "f068"
+  },
+  {
+   "path": "normalized_volumes_pct_etiv.left_cerebellum_cortex",
+   "description": "Left cerebellar cortex volume as % of eTIV",
+   "unit": "% eTIV",
+   "precision": 4,
+   "compact": "nv.lceco2",
+   "obfuscated": "f069"
+  },
+  {
+   "path": "normalized_volumes_pct_etiv.left_thalamus",
+   "description": "Left thalamus volume as % of eTIV",
+   "unit": "% eTIV",
+   "precision": 4,
+   "compact": "nv.lth",
+   "obfuscated": "f070"
+  },
+  {
+   "path": "normalized_volumes_pct_etiv.left_caudate",
+   "description": "Left caudate volume as % of eTIV",
+   "unit": "% eTIV",
+   "precision": 4,
+   "compact": "nv.lca",
+   "obfuscated": "f071"
+  },
+  {
+   "path": "normalized_volumes_pct_etiv.left_putamen",
+   "description": "Left putamen volume as % of eTIV",
+   "unit": "% eTIV",
+   "precision": 4,
+   "compact": "nv.lpu",
+   "obfuscated": "f072"
+  },
+  {
+   "path": "normalized_volumes_pct_etiv.left_pallidum",
+   "description": "Left pallidum volume as % of eTIV",
+   "unit": "% eTIV",
+   "precision": 4,
+   "compact": "nv.lpa",
+   "obfuscated": "f073"
+  },
+  {
+   "path": "normalized_volumes_pct_etiv.third_ventricle",
+   "description": "Third ventricle volume as % of eTIV",
+   "unit": "% eTIV",
+   "precision": 4,
+   "compact": "nv.thve",
+   "obfuscated": "f074"
+  },
+  {
+   "path": "normalized_volumes_pct_etiv.fourth_ventricle",
+   "description": "Fourth ventricle volume as % of eTIV",
+   "unit": "% eTIV",
+   "precision": 4,
+   "compact": "nv.fove",
+   "obfuscated": "f075"
+  },
+  {
+   "path": "normalized_volumes_pct_etiv.brain_stem",
+   "description": "Brain stem volume as % of eTIV",
+   "unit": "% eTIV",
+   "precision": 4,
+   "compact": "nv.brst",
+   "obfuscated": "f076"
+  },
+  {
+   "path": "normalized_volumes_pct_etiv.left_hippocampus",
+   "description": "Left hippocampus volume as % of eTIV",
+   "unit": "% eTIV",
+   "precision": 4,
+   "compact": "nv.lhi",
+   "obfuscated": "f077"
+  },
+  {
+   "path": "normalized_volumes_pct_etiv.left_amygdala",
+   "description": "Left amygdala volume as % of eTIV",
+   "unit": "% eTIV",
+   "precision": 4,
+   "compact": "nv.lam",
+   "obfuscated": "f078"
+  },
+  {
+   "path": "normalized_volumes_pct_etiv.left_accumbens",
+   "description": "Left nucleus accumbens volume as % of eTIV",
+   "unit": "% eTIV",
+   "precision": 4,
+   "compact": "nv.lac",
+   "obfuscated": "f079"
+  },
+  {
+   "path": "normalized_volumes_pct_etiv.left_ventral_dc",
+   "description": "Left ventral diencephalon volume as % of eTIV",
+   "unit": "% eTIV",
+   "precision": 4,
+   "compact": "nv.lvedc",
+   "obfuscated": "f080"
+  },
+  {
+   "path": "normalized_volumes_pct_etiv.right_cerebral_white_matter",
+   "description": "Right cerebral white matter (excludes corpus callosum) volume as % of eTIV",
+   "unit": "% eTIV",
+   "precision": 4,
+   "compact": "nv.rcwm",
+   "obfuscated": "f081"
+  },
+  {
+   "path": "normalized_volumes_pct_etiv.right_cerebral_cortex",
+   "description": "Right cerebral cortex (FreeSurfer aseg volumetric definition) volume as % of eTIV",
+   "unit": "% eTIV",
+   "precision": 4,
+   "compact": "nv.rceco",
+   "obfuscated": "f082"
+  },
+  {
+   "path": "normalized_volumes_pct_etiv.right_lateral_ventricle",
+   "description": "Right lateral ventricle volume as % of eTIV",
+   "unit": "% eTIV",
+   "precision": 4,
+   "compact": "nv.rlave",
+   "obfuscated": "f083"
+  },
+  {
+   "path": "normalized_volumes_pct_etiv.right_cerebellum_white_matter",
+   "description": "Right cerebellar white matter volume as % of eTIV",
+   "unit": "% eTIV",
+   "precision": 4,
+   "compact": "nv.rcwm2",
+   "obfuscated": "f084"
+  },
+  {
+   "path": "normalized_volumes_pct_etiv.right_cerebellum_cortex",
+   "description": "Right cerebellar cortex volume as % of eTIV",
+   "unit": "% eTIV",
+   "precision": 4,
+   "compact": "nv.rceco2",
+   "obfuscated": "f085"
+  },
+  {
+   "path": "normalized_volumes_pct_etiv.right_thalamus",
+   "description": "Right thalamus volume as % of eTIV",
+   "unit": "% eTIV",
+   "precision": 4,
+   "compact": "nv.rth",
+   "obfuscated": "f086"
+  },
+  {
+   "path": "normalized_volumes_pct_etiv.right_caudate",
+   "description": "Right caudate volume as % of eTIV",
+   "unit": "% eTIV",
+   "precision": 4,
+   "compact": "nv.rca",
+   "obfuscated": "f087"
+  },
+  {
+   "path": "normalized_volumes_pct_etiv.right_putamen",
+   "description": "Right putamen volume as % of eTIV",
+   "unit": "% eTIV",
+   "precision": 4,
+   "compact": "nv.rpu",
+   "obfuscated": "f088"
+  },
+  {
+   "path": "normalized_volumes_pct_etiv.right_pallidum",
+   "description": "Right pallidum volume as % of eTIV",
+   "unit": "% eTIV",
+   "precision": 4,
+   "compact": "nv.rpa",
+   "obfuscated": "f089"
+  },
+  {
+   "path": "normalized_volumes_pct_etiv.right_hippocampus",
+   "description": "Right hippocampus volume as % of eTIV",
+   "unit": "% eTIV",
+   "precision": 4,
+   "compact": "nv.rhi",
+   "obfuscated": "f090"
+  },
+  {
+   "path": "normalized_volumes_pct_etiv.right_amygdala",
+   "description": "Right amygdala volume as % of eTIV",
+   "unit": "% eTIV",
+   "precision": 4,
+   "compact": "nv.ram",
+   "obfuscated": "f091"
+  },
+  {
+   "path": "normalized_volumes_pct_etiv.right_accumbens",
+   "description": "Right nucleus accumbens volume as % of eTIV",
+   "unit": "% eTIV",
+   "precision": 4,
+   "compact": "nv.rac",
+   "obfuscated": "f092"
+  },
+  {
+   "path": "normalized_volumes_pct_etiv.right_ventral_dc",
+   "description": "Right ventral diencephalon volume as % of eTIV",
+   "unit": "% eTIV",
+   "precision": 4,
+   "compact": "nv.rvedc",
+   "obfuscated": "f093"
+  },
+  {
+   "path": "intensity.gm.mean",
+   "description": "gm intensity mean (N4, WM = 110)",
+   "unit": "a.u.",
+   "precision": 2,
+   "compact": "i.gmmean",
+   "obfuscated": "f094"
+  },
+  {
+   "path": "intensity.gm.sd",
+   "description": "gm intensity sd (N4, WM = 110)",
+   "unit": "a.u.",
+   "precision": 2,
+   "compact": "i.gmsd",
+   "obfuscated": "f095"
+  },
+  {
+   "path": "intensity.gm.p05",
+   "description": "gm intensity p05 (N4, WM = 110)",
+   "unit": "a.u.",
+   "precision": 2,
+   "compact": "i.gmp05",
+   "obfuscated": "f096"
+  },
+  {
+   "path": "intensity.gm.p50",
+   "description": "gm intensity p50 (N4, WM = 110)",
+   "unit": "a.u.",
+   "precision": 2,
+   "compact": "i.gmp50",
+   "obfuscated": "f097"
+  },
+  {
+   "path": "intensity.gm.p95",
+   "description": "gm intensity p95 (N4, WM = 110)",
+   "unit": "a.u.",
+   "precision": 2,
+   "compact": "i.gmp95",
+   "obfuscated": "f098"
+  },
+  {
+   "path": "intensity.wm.mean",
+   "description": "wm intensity mean (N4, WM = 110)",
+   "unit": "a.u.",
+   "precision": 2,
+   "compact": "i.wmmean",
+   "obfuscated": "f099"
+  },
+  {
+   "path": "intensity.wm.sd",
+   "description": "wm intensity sd (N4, WM = 110)",
+   "unit": "a.u.",
+   "precision": 2,
+   "compact": "i.wmsd",
+   "obfuscated": "f100"
+  },
+  {
+   "path": "intensity.wm.p05",
+   "description": "wm intensity p05 (N4, WM = 110)",
+   "unit": "a.u.",
+   "precision": 2,
+   "compact": "i.wmp05",
+   "obfuscated": "f101"
+  },
+  {
+   "path": "intensity.wm.p50",
+   "description": "wm intensity p50 (N4, WM = 110)",
+   "unit": "a.u.",
+   "precision": 2,
+   "compact": "i.wmp50",
+   "obfuscated": "f102"
+  },
+  {
+   "path": "intensity.wm.p95",
+   "description": "wm intensity p95 (N4, WM = 110)",
+   "unit": "a.u.",
+   "precision": 2,
+   "compact": "i.wmp95",
+   "obfuscated": "f103"
+  },
+  {
+   "path": "intensity.csf_ventricular.mean",
+   "description": "csf_ventricular intensity mean (N4, WM = 110)",
+   "unit": "a.u.",
+   "precision": 2,
+   "compact": "i.csfmean",
+   "obfuscated": "f104"
+  },
+  {
+   "path": "intensity.csf_ventricular.sd",
+   "description": "csf_ventricular intensity sd (N4, WM = 110)",
+   "unit": "a.u.",
+   "precision": 2,
+   "compact": "i.csfsd",
+   "obfuscated": "f105"
+  },
+  {
+   "path": "intensity.csf_ventricular.p05",
+   "description": "csf_ventricular intensity p05 (N4, WM = 110)",
+   "unit": "a.u.",
+   "precision": 2,
+   "compact": "i.csfp05",
+   "obfuscated": "f106"
+  },
+  {
+   "path": "intensity.csf_ventricular.p50",
+   "description": "csf_ventricular intensity p50 (N4, WM = 110)",
+   "unit": "a.u.",
+   "precision": 2,
+   "compact": "i.csfp50",
+   "obfuscated": "f107"
+  },
+  {
+   "path": "intensity.csf_ventricular.p95",
+   "description": "csf_ventricular intensity p95 (N4, WM = 110)",
+   "unit": "a.u.",
+   "precision": 2,
+   "compact": "i.csfp95",
+   "obfuscated": "f108"
+  },
+  {
+   "path": "intensity.gm_wm_ratio",
+   "description": "Mean GM / mean WM intensity",
+   "unit": "ratio",
+   "precision": 4,
+   "compact": "i.gwr",
+   "obfuscated": "f109"
+  },
+  {
+   "path": "intensity.gm_wm_contrast_pct",
+   "description": "(WM - GM) / mean(WM, GM) x 100",
+   "unit": "%",
+   "precision": 2,
+   "compact": "i.gwcp",
+   "obfuscated": "f110"
+  },
+  {
+   "path": "quality.iqms.cjv",
+   "description": "Image-quality metric cjv (MRIQC definition, docs/QC.md)",
+   "unit": "a.u.",
+   "precision": 4,
+   "compact": "q.cj",
+   "obfuscated": "f111"
+  },
+  {
+   "path": "quality.iqms.cnr",
+   "description": "Image-quality metric cnr (MRIQC definition, docs/QC.md)",
+   "unit": "a.u.",
+   "precision": 4,
+   "compact": "q.cn",
+   "obfuscated": "f112"
+  },
+  {
+   "path": "quality.iqms.snr_gm",
+   "description": "Image-quality metric snr_gm (MRIQC definition, docs/QC.md)",
+   "unit": "a.u.",
+   "precision": 4,
+   "compact": "q.sngm",
+   "obfuscated": "f113"
+  },
+  {
+   "path": "quality.iqms.snr_wm",
+   "description": "Image-quality metric snr_wm (MRIQC definition, docs/QC.md)",
+   "unit": "a.u.",
+   "precision": 4,
+   "compact": "q.snwm",
+   "obfuscated": "f114"
+  },
+  {
+   "path": "quality.iqms.snr_csf",
+   "description": "Image-quality metric snr_csf (MRIQC definition, docs/QC.md)",
+   "unit": "a.u.",
+   "precision": 4,
+   "compact": "q.sncs",
+   "obfuscated": "f115"
+  },
+  {
+   "path": "quality.iqms.snr_total",
+   "description": "Image-quality metric snr_total (MRIQC definition, docs/QC.md)",
+   "unit": "a.u.",
+   "precision": 4,
+   "compact": "q.snto",
+   "obfuscated": "f116"
+  },
+  {
+   "path": "quality.iqms.snrd_gm",
+   "description": "Image-quality metric snrd_gm (MRIQC definition, docs/QC.md)",
+   "unit": "a.u.",
+   "precision": 4,
+   "compact": "q.sngm2",
+   "obfuscated": "f117"
+  },
+  {
+   "path": "quality.iqms.snrd_wm",
+   "description": "Image-quality metric snrd_wm (MRIQC definition, docs/QC.md)",
+   "unit": "a.u.",
+   "precision": 4,
+   "compact": "q.snwm2",
+   "obfuscated": "f118"
+  },
+  {
+   "path": "quality.iqms.snrd_csf",
+   "description": "Image-quality metric snrd_csf (MRIQC definition, docs/QC.md)",
+   "unit": "a.u.",
+   "precision": 4,
+   "compact": "q.sncs2",
+   "obfuscated": "f119"
+  },
+  {
+   "path": "quality.iqms.snrd_total",
+   "description": "Image-quality metric snrd_total (MRIQC definition, docs/QC.md)",
+   "unit": "a.u.",
+   "precision": 4,
+   "compact": "q.snto2",
+   "obfuscated": "f120"
+  },
+  {
+   "path": "quality.iqms.efc",
+   "description": "Image-quality metric efc (MRIQC definition, docs/QC.md)",
+   "unit": "a.u.",
+   "precision": 4,
+   "compact": "q.ef",
+   "obfuscated": "f121"
+  },
+  {
+   "path": "quality.iqms.fber",
+   "description": "Image-quality metric fber (MRIQC definition, docs/QC.md)",
+   "unit": "a.u.",
+   "precision": 4,
+   "compact": "q.fb",
+   "obfuscated": "f122"
+  },
+  {
+   "path": "quality.iqms.wm2max",
+   "description": "Image-quality metric wm2max (MRIQC definition, docs/QC.md)",
+   "unit": "a.u.",
+   "precision": 4,
+   "compact": "q.wm",
+   "obfuscated": "f123"
+  },
+  {
+   "path": "quality.iqms.inu_med",
+   "description": "Image-quality metric inu_med (MRIQC definition, docs/QC.md)",
+   "unit": "a.u.",
+   "precision": 4,
+   "compact": "q.inme",
+   "obfuscated": "f124"
+  },
+  {
+   "path": "quality.iqms.inu_range",
+   "description": "Image-quality metric inu_range (MRIQC definition, docs/QC.md)",
+   "unit": "a.u.",
+   "precision": 4,
+   "compact": "q.inra",
+   "obfuscated": "f125"
+  },
+  {
+   "path": "normative.z.left_cerebral_white_matter",
+   "description": "Normative z-score of left_cerebral_white_matter (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.lcwm",
+   "obfuscated": "f126"
+  },
+  {
+   "path": "normative.percentile.left_cerebral_white_matter",
+   "description": "Normative percentile of left_cerebral_white_matter",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.lcwm",
+   "obfuscated": "f127"
+  },
+  {
+   "path": "normative.z.left_cerebral_cortex",
+   "description": "Normative z-score of left_cerebral_cortex (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.lceco",
+   "obfuscated": "f128"
+  },
+  {
+   "path": "normative.percentile.left_cerebral_cortex",
+   "description": "Normative percentile of left_cerebral_cortex",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.lceco",
+   "obfuscated": "f129"
+  },
+  {
+   "path": "normative.z.left_lateral_ventricle",
+   "description": "Normative z-score of left_lateral_ventricle (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.llave",
+   "obfuscated": "f130"
+  },
+  {
+   "path": "normative.percentile.left_lateral_ventricle",
+   "description": "Normative percentile of left_lateral_ventricle",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.llave",
+   "obfuscated": "f131"
+  },
+  {
+   "path": "normative.z.left_cerebellum_white_matter",
+   "description": "Normative z-score of left_cerebellum_white_matter (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.lcwm2",
+   "obfuscated": "f132"
+  },
+  {
+   "path": "normative.percentile.left_cerebellum_white_matter",
+   "description": "Normative percentile of left_cerebellum_white_matter",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.lcwm2",
+   "obfuscated": "f133"
+  },
+  {
+   "path": "normative.z.left_cerebellum_cortex",
+   "description": "Normative z-score of left_cerebellum_cortex (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.lceco2",
+   "obfuscated": "f134"
+  },
+  {
+   "path": "normative.percentile.left_cerebellum_cortex",
+   "description": "Normative percentile of left_cerebellum_cortex",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.lceco2",
+   "obfuscated": "f135"
+  },
+  {
+   "path": "normative.z.left_thalamus",
+   "description": "Normative z-score of left_thalamus (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.lth",
+   "obfuscated": "f136"
+  },
+  {
+   "path": "normative.percentile.left_thalamus",
+   "description": "Normative percentile of left_thalamus",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.lth",
+   "obfuscated": "f137"
+  },
+  {
+   "path": "normative.z.left_caudate",
+   "description": "Normative z-score of left_caudate (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.lca",
+   "obfuscated": "f138"
+  },
+  {
+   "path": "normative.percentile.left_caudate",
+   "description": "Normative percentile of left_caudate",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.lca",
+   "obfuscated": "f139"
+  },
+  {
+   "path": "normative.z.left_putamen",
+   "description": "Normative z-score of left_putamen (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.lpu",
+   "obfuscated": "f140"
+  },
+  {
+   "path": "normative.percentile.left_putamen",
+   "description": "Normative percentile of left_putamen",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.lpu",
+   "obfuscated": "f141"
+  },
+  {
+   "path": "normative.z.left_pallidum",
+   "description": "Normative z-score of left_pallidum (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.lpa",
+   "obfuscated": "f142"
+  },
+  {
+   "path": "normative.percentile.left_pallidum",
+   "description": "Normative percentile of left_pallidum",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.lpa",
+   "obfuscated": "f143"
+  },
+  {
+   "path": "normative.z.third_ventricle",
+   "description": "Normative z-score of third_ventricle (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.thve",
+   "obfuscated": "f144"
+  },
+  {
+   "path": "normative.percentile.third_ventricle",
+   "description": "Normative percentile of third_ventricle",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.thve",
+   "obfuscated": "f145"
+  },
+  {
+   "path": "normative.z.fourth_ventricle",
+   "description": "Normative z-score of fourth_ventricle (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.fove",
+   "obfuscated": "f146"
+  },
+  {
+   "path": "normative.percentile.fourth_ventricle",
+   "description": "Normative percentile of fourth_ventricle",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.fove",
+   "obfuscated": "f147"
+  },
+  {
+   "path": "normative.z.brain_stem",
+   "description": "Normative z-score of brain_stem (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.brst",
+   "obfuscated": "f148"
+  },
+  {
+   "path": "normative.percentile.brain_stem",
+   "description": "Normative percentile of brain_stem",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.brst",
+   "obfuscated": "f149"
+  },
+  {
+   "path": "normative.z.left_hippocampus",
+   "description": "Normative z-score of left_hippocampus (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.lhi",
+   "obfuscated": "f150"
+  },
+  {
+   "path": "normative.percentile.left_hippocampus",
+   "description": "Normative percentile of left_hippocampus",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.lhi",
+   "obfuscated": "f151"
+  },
+  {
+   "path": "normative.z.left_amygdala",
+   "description": "Normative z-score of left_amygdala (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.lam",
+   "obfuscated": "f152"
+  },
+  {
+   "path": "normative.percentile.left_amygdala",
+   "description": "Normative percentile of left_amygdala",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.lam",
+   "obfuscated": "f153"
+  },
+  {
+   "path": "normative.z.left_accumbens",
+   "description": "Normative z-score of left_accumbens (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.lac",
+   "obfuscated": "f154"
+  },
+  {
+   "path": "normative.percentile.left_accumbens",
+   "description": "Normative percentile of left_accumbens",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.lac",
+   "obfuscated": "f155"
+  },
+  {
+   "path": "normative.z.left_ventral_dc",
+   "description": "Normative z-score of left_ventral_dc (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.lvedc",
+   "obfuscated": "f156"
+  },
+  {
+   "path": "normative.percentile.left_ventral_dc",
+   "description": "Normative percentile of left_ventral_dc",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.lvedc",
+   "obfuscated": "f157"
+  },
+  {
+   "path": "normative.z.right_cerebral_white_matter",
+   "description": "Normative z-score of right_cerebral_white_matter (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.rcwm",
+   "obfuscated": "f158"
+  },
+  {
+   "path": "normative.percentile.right_cerebral_white_matter",
+   "description": "Normative percentile of right_cerebral_white_matter",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.rcwm",
+   "obfuscated": "f159"
+  },
+  {
+   "path": "normative.z.right_cerebral_cortex",
+   "description": "Normative z-score of right_cerebral_cortex (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.rceco",
+   "obfuscated": "f160"
+  },
+  {
+   "path": "normative.percentile.right_cerebral_cortex",
+   "description": "Normative percentile of right_cerebral_cortex",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.rceco",
+   "obfuscated": "f161"
+  },
+  {
+   "path": "normative.z.right_lateral_ventricle",
+   "description": "Normative z-score of right_lateral_ventricle (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.rlave",
+   "obfuscated": "f162"
+  },
+  {
+   "path": "normative.percentile.right_lateral_ventricle",
+   "description": "Normative percentile of right_lateral_ventricle",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.rlave",
+   "obfuscated": "f163"
+  },
+  {
+   "path": "normative.z.right_cerebellum_white_matter",
+   "description": "Normative z-score of right_cerebellum_white_matter (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.rcwm2",
+   "obfuscated": "f164"
+  },
+  {
+   "path": "normative.percentile.right_cerebellum_white_matter",
+   "description": "Normative percentile of right_cerebellum_white_matter",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.rcwm2",
+   "obfuscated": "f165"
+  },
+  {
+   "path": "normative.z.right_cerebellum_cortex",
+   "description": "Normative z-score of right_cerebellum_cortex (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.rceco2",
+   "obfuscated": "f166"
+  },
+  {
+   "path": "normative.percentile.right_cerebellum_cortex",
+   "description": "Normative percentile of right_cerebellum_cortex",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.rceco2",
+   "obfuscated": "f167"
+  },
+  {
+   "path": "normative.z.right_thalamus",
+   "description": "Normative z-score of right_thalamus (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.rth",
+   "obfuscated": "f168"
+  },
+  {
+   "path": "normative.percentile.right_thalamus",
+   "description": "Normative percentile of right_thalamus",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.rth",
+   "obfuscated": "f169"
+  },
+  {
+   "path": "normative.z.right_caudate",
+   "description": "Normative z-score of right_caudate (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.rca",
+   "obfuscated": "f170"
+  },
+  {
+   "path": "normative.percentile.right_caudate",
+   "description": "Normative percentile of right_caudate",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.rca",
+   "obfuscated": "f171"
+  },
+  {
+   "path": "normative.z.right_putamen",
+   "description": "Normative z-score of right_putamen (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.rpu",
+   "obfuscated": "f172"
+  },
+  {
+   "path": "normative.percentile.right_putamen",
+   "description": "Normative percentile of right_putamen",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.rpu",
+   "obfuscated": "f173"
+  },
+  {
+   "path": "normative.z.right_pallidum",
+   "description": "Normative z-score of right_pallidum (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.rpa",
+   "obfuscated": "f174"
+  },
+  {
+   "path": "normative.percentile.right_pallidum",
+   "description": "Normative percentile of right_pallidum",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.rpa",
+   "obfuscated": "f175"
+  },
+  {
+   "path": "normative.z.right_hippocampus",
+   "description": "Normative z-score of right_hippocampus (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.rhi",
+   "obfuscated": "f176"
+  },
+  {
+   "path": "normative.percentile.right_hippocampus",
+   "description": "Normative percentile of right_hippocampus",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.rhi",
+   "obfuscated": "f177"
+  },
+  {
+   "path": "normative.z.right_amygdala",
+   "description": "Normative z-score of right_amygdala (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.ram",
+   "obfuscated": "f178"
+  },
+  {
+   "path": "normative.percentile.right_amygdala",
+   "description": "Normative percentile of right_amygdala",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.ram",
+   "obfuscated": "f179"
+  },
+  {
+   "path": "normative.z.right_accumbens",
+   "description": "Normative z-score of right_accumbens (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.rac",
+   "obfuscated": "f180"
+  },
+  {
+   "path": "normative.percentile.right_accumbens",
+   "description": "Normative percentile of right_accumbens",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.rac",
+   "obfuscated": "f181"
+  },
+  {
+   "path": "normative.z.right_ventral_dc",
+   "description": "Normative z-score of right_ventral_dc (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.rvedc",
+   "obfuscated": "f182"
+  },
+  {
+   "path": "normative.percentile.right_ventral_dc",
+   "description": "Normative percentile of right_ventral_dc",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.rvedc",
+   "obfuscated": "f183"
+  },
+  {
+   "path": "normative.z.total_cerebral_white_matter",
+   "description": "Normative z-score of total_cerebral_white_matter (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.tcwm",
+   "obfuscated": "f184"
+  },
+  {
+   "path": "normative.percentile.total_cerebral_white_matter",
+   "description": "Normative percentile of total_cerebral_white_matter",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.tcwm",
+   "obfuscated": "f185"
+  },
+  {
+   "path": "normative.z.total_cerebral_cortex",
+   "description": "Normative z-score of total_cerebral_cortex (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.tcc",
+   "obfuscated": "f186"
+  },
+  {
+   "path": "normative.percentile.total_cerebral_cortex",
+   "description": "Normative percentile of total_cerebral_cortex",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.tcc",
+   "obfuscated": "f187"
+  },
+  {
+   "path": "normative.z.total_lateral_ventricle",
+   "description": "Normative z-score of total_lateral_ventricle (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.tlv",
+   "obfuscated": "f188"
+  },
+  {
+   "path": "normative.percentile.total_lateral_ventricle",
+   "description": "Normative percentile of total_lateral_ventricle",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.tlv",
+   "obfuscated": "f189"
+  },
+  {
+   "path": "normative.z.total_cerebellum_white_matter",
+   "description": "Normative z-score of total_cerebellum_white_matter (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.tcwm2",
+   "obfuscated": "f190"
+  },
+  {
+   "path": "normative.percentile.total_cerebellum_white_matter",
+   "description": "Normative percentile of total_cerebellum_white_matter",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.tcwm2",
+   "obfuscated": "f191"
+  },
+  {
+   "path": "normative.z.total_cerebellum_cortex",
+   "description": "Normative z-score of total_cerebellum_cortex (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.tcc2",
+   "obfuscated": "f192"
+  },
+  {
+   "path": "normative.percentile.total_cerebellum_cortex",
+   "description": "Normative percentile of total_cerebellum_cortex",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.tcc2",
+   "obfuscated": "f193"
+  },
+  {
+   "path": "normative.z.total_thalamus",
+   "description": "Normative z-score of total_thalamus (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.toth",
+   "obfuscated": "f194"
+  },
+  {
+   "path": "normative.percentile.total_thalamus",
+   "description": "Normative percentile of total_thalamus",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.toth",
+   "obfuscated": "f195"
+  },
+  {
+   "path": "normative.z.total_caudate",
+   "description": "Normative z-score of total_caudate (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.toca",
+   "obfuscated": "f196"
+  },
+  {
+   "path": "normative.percentile.total_caudate",
+   "description": "Normative percentile of total_caudate",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.toca",
+   "obfuscated": "f197"
+  },
+  {
+   "path": "normative.z.total_putamen",
+   "description": "Normative z-score of total_putamen (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.topu",
+   "obfuscated": "f198"
+  },
+  {
+   "path": "normative.percentile.total_putamen",
+   "description": "Normative percentile of total_putamen",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.topu",
+   "obfuscated": "f199"
+  },
+  {
+   "path": "normative.z.total_pallidum",
+   "description": "Normative z-score of total_pallidum (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.topa",
+   "obfuscated": "f200"
+  },
+  {
+   "path": "normative.percentile.total_pallidum",
+   "description": "Normative percentile of total_pallidum",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.topa",
+   "obfuscated": "f201"
+  },
+  {
+   "path": "normative.z.total_hippocampus",
+   "description": "Normative z-score of total_hippocampus (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.tohi",
+   "obfuscated": "f202"
+  },
+  {
+   "path": "normative.percentile.total_hippocampus",
+   "description": "Normative percentile of total_hippocampus",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.tohi",
+   "obfuscated": "f203"
+  },
+  {
+   "path": "normative.z.total_amygdala",
+   "description": "Normative z-score of total_amygdala (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.toam",
+   "obfuscated": "f204"
+  },
+  {
+   "path": "normative.percentile.total_amygdala",
+   "description": "Normative percentile of total_amygdala",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.toam",
+   "obfuscated": "f205"
+  },
+  {
+   "path": "normative.z.total_accumbens",
+   "description": "Normative z-score of total_accumbens (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.toac",
+   "obfuscated": "f206"
+  },
+  {
+   "path": "normative.percentile.total_accumbens",
+   "description": "Normative percentile of total_accumbens",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.toac",
+   "obfuscated": "f207"
+  },
+  {
+   "path": "normative.z.total_ventral_dc",
+   "description": "Normative z-score of total_ventral_dc (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.tvd",
+   "obfuscated": "f208"
+  },
+  {
+   "path": "normative.percentile.total_ventral_dc",
+   "description": "Normative percentile of total_ventral_dc",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.tvd",
+   "obfuscated": "f209"
+  },
+  {
+   "path": "normative.z.gray_matter_ml",
+   "description": "Normative z-score of gray_matter_ml (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.gmm",
+   "obfuscated": "f210"
+  },
+  {
+   "path": "normative.percentile.gray_matter_ml",
+   "description": "Normative percentile of gray_matter_ml",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.gmm",
+   "obfuscated": "f211"
+  },
+  {
+   "path": "normative.z.white_matter_ml",
+   "description": "Normative z-score of white_matter_ml (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.wmm",
+   "obfuscated": "f212"
+  },
+  {
+   "path": "normative.percentile.white_matter_ml",
+   "description": "Normative percentile of white_matter_ml",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.wmm",
+   "obfuscated": "f213"
+  },
+  {
+   "path": "normative.z.ventricular_csf_ml",
+   "description": "Normative z-score of ventricular_csf_ml (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.vcm",
+   "obfuscated": "f214"
+  },
+  {
+   "path": "normative.percentile.ventricular_csf_ml",
+   "description": "Normative percentile of ventricular_csf_ml",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.vcm",
+   "obfuscated": "f215"
+  },
+  {
+   "path": "normative.z.brain_parenchyma_ml",
+   "description": "Normative z-score of brain_parenchyma_ml (age, age^2, sex, site, eTIV; IXI train)",
+   "unit": "z",
+   "precision": 2,
+   "compact": "z.bpm",
+   "obfuscated": "f216"
+  },
+  {
+   "path": "normative.percentile.brain_parenchyma_ml",
+   "description": "Normative percentile of brain_parenchyma_ml",
+   "unit": "percentile",
+   "precision": 1,
+   "compact": "pc.bpm",
+   "obfuscated": "f217"
+  }
+ ]
+}
